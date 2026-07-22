@@ -8,21 +8,23 @@ import styles from './OrderTracking.module.css';
 export const OrderTracking: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialRef = searchParams.get('orderId') || '';
-  const { getOrderById } = useStore();
+  const { orders, getOrderById } = useStore();
 
   const [orderRefInput, setOrderRefInput] = useState(initialRef);
   const [emailInput, setEmailInput] = useState('');
   const [searchedOrder, setSearchedOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  // Real-time order tracking sync
   useEffect(() => {
-    if (initialRef) {
+    if (searchedOrder) {
+      const match = getOrderById(searchedOrder.id) || getOrderById(searchedOrder.orderNumber);
+      if (match) setSearchedOrder(match);
+    } else if (initialRef) {
       const match = getOrderById(initialRef);
-      if (match) {
-        setSearchedOrder(match);
-      }
+      if (match) setSearchedOrder(match);
     }
-  }, [initialRef, getOrderById]);
+  }, [orders, initialRef, getOrderById]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

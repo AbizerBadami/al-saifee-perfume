@@ -26,13 +26,17 @@ interface StoreContextType {
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'rating' | 'reviewCount'>) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  saveProduct: (product: Partial<Product>) => Promise<void>;
+  resetDemoProducts: () => Promise<void>;
   createOrder: (orderData: Omit<Order, 'id' | 'createdAt'>) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: Order['status'], trackingNumber?: string) => Promise<void>;
   getOrderById: (orderId: string) => Order | undefined;
   addReview: (productId: string, userName: string, userEmail: string, rating: number, comment: string) => Promise<void>;
   approveReview: (reviewId: string) => Promise<void>;
   deleteReview: (reviewId: string) => Promise<void>;
+  moderateReview: (reviewId: string, status: 'Approved' | 'Rejected') => Promise<void>;
   addCoupon: (coupon: Omit<Coupon, 'id' | 'createdAt'>) => Promise<void>;
+  saveCoupon: (coupon: Partial<Coupon>) => Promise<void>;
   deleteCoupon: (id: string) => Promise<void>;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
 }
@@ -43,7 +47,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('oud_elixir_products');
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      if (saved) {
+        const parsed: Product[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map<string, Product>();
+          INITIAL_PRODUCTS.forEach((p) => map.set(p.id, p));
+          parsed.forEach((p) => map.set(p.id, p));
+          const merged = Array.from(map.values());
+          localStorage.setItem('oud_elixir_products', JSON.stringify(merged));
+          return merged;
+        }
+      }
+      return INITIAL_PRODUCTS;
     } catch {
       return INITIAL_PRODUCTS;
     }
@@ -101,15 +116,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
         if (!snapshot.empty) {
-          const list: Product[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Product));
-          setProducts(list);
+          const remoteList: Product[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Product));
+          setProducts((prev) => {
+            const map = new Map<string, Product>();
+            // Keep all existing products (including demo products)
+            prev.forEach((p) => map.set(p.id, p));
+            // Add/update remote products
+            remoteList.forEach((p) => map.set(p.id, p));
+            const merged = Array.from(map.values());
+            localStorage.setItem('oud_elixir_products', JSON.stringify(merged));
+            return merged;
+          });
         }
       }, () => {});
 
       const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
         if (!snapshot.empty) {
-          const list: Order[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
-          setOrders(list);
+          const remoteOrders: Order[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
+          setOrders((prev) => {
+            const map = new Map<string, Order>();
+            prev.forEach((o) => map.set(o.id, o));
+            remoteOrders.forEach((o) => map.set(o.id, o));
+            const merged = Array.from(map.values());
+            localStorage.setItem('oud_elixir_orders', JSON.stringify(merged));
+            return merged;
+          });
         }
       }, () => {});
 
@@ -136,6 +167,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.warn('Firestore real-time listeners inactive, using persistent local store');
     }
+  }, []);
+
+  // Real-time Storage & Custom Event Sync
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const savedOrders = localStorage.getItem('oud_elixir_orders');
+        if (savedOrders) setOrders(JSON.parse(savedOrders));
+        const savedProducts = localStorage.getItem('oud_elixir_products');
+        if (savedProducts) setProducts(JSON.parse(savedProducts));
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('order_updated', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('order_updated', handleSync);
+    };
   }, []);
 
   // Save to LocalStorage whenever state changes
@@ -181,7 +231,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: new Date().toISOString(),
     };
 
-    setProducts((prev) => [newProduct, ...prev]);
+    setProducts((prev) => {
+      const updated = [newProduct, ...prev];
+      localStorage.setItem('oud_elixir_products', JSON.stringify(updated));
+      return updated;
+    });
 
     try {
       await setDoc(doc(db, 'products', newId), newProduct);
@@ -191,7 +245,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    setProducts((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      localStorage.setItem('oud_elixir_products', JSON.stringify(updated));
+      return updated;
+    });
 
     try {
       await updateDoc(doc(db, 'products', id), updates);
@@ -201,12 +259,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteProduct = async (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    setProducts((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      localStorage.setItem('oud_elixir_products', JSON.stringify(updated));
+      return updated;
+    });
 
     try {
       await deleteDoc(doc(db, 'products', id));
     } catch (e) {
       console.warn('Deleted product locally');
+    }
+  };
+
+  const saveProduct = async (productData: Partial<Product>) => {
+    if (productData.id) {
+      await updateProduct(productData.id, productData);
+    } else {
+      await addProduct(productData as Omit<Product, 'id' | 'createdAt' | 'rating' | 'reviewCount'>);
+    }
+  };
+
+  const resetDemoProducts = async () => {
+    setProducts(INITIAL_PRODUCTS);
+    localStorage.setItem('oud_elixir_products', JSON.stringify(INITIAL_PRODUCTS));
+  };
+
+  const moderateReview = async (reviewId: string, status: 'Approved' | 'Rejected') => {
+    if (status === 'Approved') {
+      await approveReview(reviewId);
+    } else {
+      await deleteReview(reviewId);
+    }
+  };
+
+  const saveCoupon = async (couponData: Partial<Coupon>) => {
+    if (couponData.id) {
+      setCoupons((prev) => prev.map((c) => (c.id === couponData.id ? ({ ...c, ...couponData } as Coupon) : c)));
+    } else {
+      await addCoupon(couponData as Omit<Coupon, 'id' | 'createdAt'>);
     }
   };
 
@@ -219,7 +310,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: new Date().toISOString(),
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => {
+      const updated = [newOrder, ...prev];
+      localStorage.setItem('oud_elixir_orders', JSON.stringify(updated));
+      window.dispatchEvent(new Event('order_updated'));
+      return updated;
+    });
 
     try {
       await setDoc(doc(db, 'orders', newId), newOrder);
@@ -231,9 +327,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status'], trackingNumber?: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o))
-    );
+    setOrders((prev) => {
+      const updated = prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o));
+      localStorage.setItem('oud_elixir_orders', JSON.stringify(updated));
+      window.dispatchEvent(new Event('order_updated'));
+      return updated;
+    });
 
     try {
       await updateDoc(doc(db, 'orders', orderId), { status, trackingNumber });
@@ -336,13 +435,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addProduct,
         updateProduct,
         deleteProduct,
+        saveProduct,
+        resetDemoProducts,
         createOrder,
         updateOrderStatus,
         getOrderById,
         addReview,
         approveReview,
         deleteReview,
+        moderateReview,
         addCoupon,
+        saveCoupon,
         deleteCoupon,
         updateSettings,
       }}

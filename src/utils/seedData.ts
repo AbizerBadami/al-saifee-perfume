@@ -154,6 +154,57 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.6,
     reviewCount: 15,
     createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod-007',
+    title: 'Dehn Al Oud Al-Malaki',
+    subtitle: 'Royal Aged Cambodian Oud Oil',
+    category: 'Oud Specials',
+    fragranceFamily: 'Woody',
+    price: 3500,
+    salePrice: 2999,
+    stock: 8,
+    description: 'Pure, unadulterated 40-year-old wild Cambodian agarwood extract. Animalic, woody, deep leather tones with subtle sweet drydown. The holy grail of Oriental perfumery.',
+    topNotes: ['Aged Leather', 'Wild Wood Smoke', 'Balsamic Resin'],
+    middleNotes: ['Pure Cambodian Agarwood', 'Earthy Roots', 'Labdanum'],
+    baseNotes: ['Smoked Cedar', 'Vintage Musk', 'Animalic Accord'],
+    longevity: '24+ Hours',
+    projection: 'Heavy & Mystical',
+    bottleSizes: ['3ml Concentrated', '6ml Concentrated', '12ml Crystal Flacon'],
+    images: [
+      'https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=800'
+    ],
+    isFeatured: true,
+    isBestSeller: true,
+    rating: 5.0,
+    reviewCount: 56,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'prod-008',
+    title: 'Majestic Mukhallat Al-Saifee',
+    subtitle: 'Signature House Blend Attar',
+    category: 'Pure Attars',
+    fragranceFamily: 'Oriental',
+    price: 2100,
+    stock: 20,
+    description: "Our master perfumer's secret signature blend. Wild Taif rose, Hindi oud, saffron, cardamoms, and rare ambergris unified into an unforgettable royal trail.",
+    topNotes: ['Fresh Taif Rose', 'Cardamom', 'Bergamot'],
+    middleNotes: ['Kashmiri Saffron', 'Hindi Oud', 'Geranium'],
+    baseNotes: ['White Amber', 'Sandalwood', 'Natural Musk'],
+    longevity: '16-20 Hours',
+    projection: 'Powerful & Regal',
+    bottleSizes: ['6ml Concentrated', '12ml Concentrated'],
+    images: [
+      'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&q=80&w=800'
+    ],
+    isFeatured: true,
+    isBestSeller: true,
+    rating: 4.9,
+    reviewCount: 38,
+    createdAt: new Date().toISOString()
   }
 ];
 
