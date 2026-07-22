@@ -8,8 +8,8 @@ export const AdminLogin: React.FC = () => {
   const { loginAdmin, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@oudelixir.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,12 +42,6 @@ export const AdminLogin: React.FC = () => {
         <p className={styles.subtitle}>
           Protected portal for inventory, orders, and store settings
         </p>
-
-        <div className={styles.demoBanner}>
-          <strong>Preview Demo Quick Credentials:</strong>
-          <div>Email: <code>admin@oudelixir.com</code></div>
-          <div>Password: <code>admin123</code></div>
-        </div>
 
         {errorMsg && <div style={{ color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>{errorMsg}</div>}
 

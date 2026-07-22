@@ -39,15 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
           const isAdminDoc = adminDoc.exists();
 
-          const adminStatus = hasAdminClaim || isAdminDoc || currentUser.email === 'admin@oudelixir.com';
+          const adminStatus = hasAdminClaim || isAdminDoc;
           setIsAdmin(adminStatus);
           localStorage.setItem('oud_elixir_is_admin', adminStatus ? 'true' : 'false');
         } catch (err) {
           console.warn('Admin check error:', err);
-          // Fallback check
-          const isDemoAdmin = currentUser.email === 'admin@oudelixir.com';
-          setIsAdmin(isDemoAdmin);
-          localStorage.setItem('oud_elixir_is_admin', isDemoAdmin ? 'true' : 'false');
+          setIsAdmin(false);
+          localStorage.setItem('oud_elixir_is_admin', 'false');
         }
       } else {
         setIsAdmin(false);
@@ -60,19 +58,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loginAdmin = async (email: string, pass: string) => {
-    try {
-      const res = await signInWithEmailAndPassword(auth, email, pass);
-      setUser(res.user);
+    const res = await signInWithEmailAndPassword(auth, email, pass);
+    setUser(res.user);
+    // Check if user is admin in Firestore
+    const adminDoc = await getDoc(doc(db, 'admins', res.user.uid));
+    if (adminDoc.exists()) {
       setIsAdmin(true);
       localStorage.setItem('oud_elixir_is_admin', 'true');
-    } catch (err: any) {
-      // Fallback for immediate admin access in demo/preview mode
-      if (email === 'admin@oudelixir.com' && pass === 'admin123') {
-        setIsAdmin(true);
-        localStorage.setItem('oud_elixir_is_admin', 'true');
-        return;
-      }
-      throw err;
+    } else {
+      setIsAdmin(false);
+      localStorage.setItem('oud_elixir_is_admin', 'false');
+      throw new Error('Access denied: Unauthorized admin user.');
     }
   };
 
