@@ -4,7 +4,13 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+# Environment files & Secrets
+.env
+.env.*
 !.env.example
-upload.bat
-upload.ps1
+*.pem
+*.key
+*.cert
+*.p12
+
+

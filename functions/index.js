@@ -198,7 +198,7 @@ exports.setAdminClaim = functions.https.onRequest((req, res) => {
   return cors(req, res, async () => {
     const { email, secretKey } = req.body;
     // Check master secret key or allow during first setup
-    const masterKey = process.env.ADMIN_SETUP_SECRET || 'oud_elixir_secret_2026';
+    const masterKey = process.env.ADMIN_SETUP_SECRET || '';
     if (secretKey !== masterKey) {
       return res.status(403).json({ error: 'Unauthorized secret key' });
     }
