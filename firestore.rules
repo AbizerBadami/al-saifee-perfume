@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Products collection
+    match /products/{productId} {
+      allow read: if true; // Public catalog
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      // Guests or users can create an order
+      allow create: if request.resource.data.orderNumber is string
+                    && request.resource.data.customerEmail is string
+                    && request.resource.data.items is list
+                    && request.resource.data.total is number;
+
+      // Read order if admin or if looking up by customer email & order number matching
+      allow get: if true; // Public order lookup filtered client-side or by query
+      allow list: if isAdmin();
+
+      // Only admin can update or delete orders (e.g. status updates)
+      allow update, delete: if isAdmin();
+    }
+
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true; // Publicly readable
+      allow create: if request.resource.data.productId is string
+                    && request.resource.data.rating is number
+                    && request.resource.data.comment is string;
+      allow update, delete: if isAdmin();
+    }
+
+    // Coupons collection
+    match /coupons/{couponId} {
+      allow read: if true; // Can validate coupons
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Settings collection
+    match /settings/{settingDoc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin list document collection
+    match /admins/{adminUid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

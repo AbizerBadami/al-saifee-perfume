@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Luxury perfume or attar product item",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Product title" },
+        "subtitle": { "type": "string", "description": "Short tagline or concentration" },
+        "category": { "type": "string", "description": "Category (Perfumes, Pure Attars, Artisanal Extracts, Oud Specials)" },
+        "fragranceFamily": { "type": "string", "description": "Fragrance Family (Woody, Amber, Floral, Oriental, Fresh, Spicy)" },
+        "price": { "type": "number", "description": "Price in USD" },
+        "salePrice": { "type": "number", "description": "Optional sale price" },
+        "stock": { "type": "integer", "description": "Inventory stock quantity" },
+        "description": { "type": "string", "description": "Full product story and notes description" },
+        "topNotes": { "type": "array", "description": "Top fragrance notes tags" },
+        "middleNotes": { "type": "array", "description": "Heart fragrance notes tags" },
+        "baseNotes": { "type": "array", "description": "Base fragrance notes tags" },
+        "longevity": { "type": "string", "description": "Longevity rating e.g. 10-12 Hours" },
+        "projection": { "type": "string", "description": "SProjection distance e.g. Strong / Enveloping" },
+        "bottleSizes": { "type": "array", "description": "Available bottle sizes e.g. 12ml, 50ml, 100ml" },
+        "images": { "type": "array", "description": "List of product image URLs" },
+        "isFeatured": { "type": "boolean", "description": "Featured on homepage" },
+        "isBestSeller": { "type": "boolean", "description": "Best seller badge" },
+        "rating": { "type": "number", "description": "Average rating from 1 to 5" },
+        "reviewCount": { "type": "integer", "description": "Number of reviews" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["title", "category", "price", "stock", "description"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "description": "Unique human readable order reference e.g. ELE-8921" },
+        "customerName": { "type": "string", "description": "Customer full name" },
+        "customerEmail": { "type": "string", "description": "Customer contact email" },
+        "shippingAddress": { "type": "object", "description": "Street, city, zip, country" },
+        "items": { "type": "array", "description": "Purchased items with quantity, size, price" },
+        "subtotal": { "type": "number", "description": "Subtotal cost" },
+        "discount": { "type": "number", "description": "Coupon discount amount" },
+        "tax": { "type": "number", "description": "Applied tax amount" },
+        "shippingFee": { "type": "number", "description": "Shipping fee" },
+        "total": { "type": "number", "description": "Final total amount" },
+        "status": { "type": "string", "enum": ["Processing", "Shipped", "Delivered", "Cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Failed"] },
+        "paymentMethod": { "type": "string", "description": "Stripe Hosted Checkout / Card" },
+        "trackingNumber": { "type": "string", "description": "Carrier tracking number" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["orderNumber", "customerName", "customerEmail", "items", "total", "status"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer product review",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "description": "Product ID reference" },
+        "userName": { "type": "string", "description": "Reviewer name" },
+        "userEmail": { "type": "string", "description": "Reviewer email" },
+        "rating": { "type": "number", "description": "Rating score 1 to 5" },
+        "comment": { "type": "string", "description": "Review commentary text" },
+        "status": { "type": "string", "enum": ["Approved", "Pending", "Rejected"] },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["productId", "userName", "rating", "comment"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount coupon code",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "description": "Coupon code uppercase e.g. WELCOME10" },
+        "discountType": { "type": "string", "enum": ["percent", "fixed"] },
+        "discountValue": { "type": "number", "description": "Percentage or fixed amount off" },
+        "minOrderAmount": { "type": "number", "description": "Minimum order value required" },
+        "active": { "type": "boolean", "description": "Is coupon currently valid" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["code", "discountType", "discountValue", "active"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global store configuration",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "supportEmail": { "type": "string" },
+        "currencySymbol": { "type": "string" },
+        "taxRate": { "type": "number" },
+        "freeShippingThreshold": { "type": "number" },
+        "promoMessage": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalog products"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Product reviews"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Store discount coupons"
+    },
+    "/settings/store": {
+      "schema": "StoreSettings",
+      "description": "Store settings configuration"
+    }
+  }
+}

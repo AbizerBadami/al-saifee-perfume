@@ -1,0 +1,103 @@
+.page {
+  max-width: 800px;
+  margin: 4rem auto;
+  padding: 0 2rem;
+  text-align: center;
+  min-height: 70vh;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  box-shadow: var(--shadow-dark), var(--shadow-gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.checkIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.15);
+  border: 2px solid var(--gold-primary);
+  color: var(--gold-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  color: var(--gold-light);
+}
+
+.orderNum {
+  font-family: monospace;
+  font-size: 1.25rem;
+  color: var(--gold-primary);
+  background: var(--bg-secondary);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.summaryBox {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.btnGroup {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.downloadBtn {
+  background: var(--gold-gradient);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-gold);
+}
+
+.trackBtn {
+  background: transparent;
+  border: 1px solid var(--gold-border);
+  color: var(--gold-light);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trackBtn:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}

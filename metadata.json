@@ -1,0 +1,6 @@
+{
+  "name": "Al-Saifee Perfumes - Haute Parfumerie & Wild Aged Oud",
+  "description": "Exquisite luxury perfume & pure attar e-commerce experience with fragrance notes pyramid, guest checkout, Razorpay, order tracking, PDF invoices, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,130 @@
+.page {
+  max-width: 1100px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+  min-height: 80vh;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  color: var(--gold-light);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 2.5rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 3rem;
+}
+
+.formSection {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formBlockTitle {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--gold-primary);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.summarySection {
+  background: var(--bg-secondary);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.summaryTitle {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--gold-light);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 0.75rem;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.totalRow {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1rem;
+}
+
+.payBtn {
+  background: var(--gold-gradient);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-gold);
+  margin-top: 0.5rem;
+  transition: var(--transition-fast);
+}
+
+.payBtn:hover {
+  opacity: 0.92;
+}
+
+@media (max-width: 850px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}

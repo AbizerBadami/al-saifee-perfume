@@ -1,0 +1,240 @@
+.page {
+  max-width: 1200px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+  min-height: 80vh;
+}
+
+.topLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.5rem;
+  align-items: start;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mainImageWrapper {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #0d0d0d;
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-dark);
+}
+
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.thumb {
+  width: 70px;
+  height: 70px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: var(--transition-fast);
+}
+
+.thumb:hover, .activeThumb {
+  opacity: 1;
+  border-color: var(--gold-primary);
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.categoryTag {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-primary);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.price {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.oldPrice {
+  font-size: 1.1rem;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.description {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+.optionTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-primary);
+  margin-bottom: 0.5rem;
+}
+
+.sizesRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sizeBtn {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  color: var(--text-secondary);
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.sizeBtn:hover, .activeSize {
+  border-color: var(--gold-primary);
+  color: #000;
+  background: var(--gold-gradient);
+  font-weight: 600;
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.qtyBox {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+
+.qtyBtn {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.qtyVal {
+  padding: 0 0.85rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.addBtn {
+  flex: 1;
+  background: var(--gold-gradient);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.5rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-gold);
+}
+
+.addBtn:hover {
+  opacity: 0.92;
+}
+
+.wishBtn {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  color: var(--text-secondary);
+  padding: 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.wishBtn:hover, .activeWish {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.specGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.specLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.specVal {
+  font-size: 0.9rem;
+  color: var(--gold-light);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .topLayout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}

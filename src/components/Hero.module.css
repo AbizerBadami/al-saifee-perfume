@@ -1,0 +1,112 @@
+.heroSection {
+  position: relative;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #1a1505 0%, #0a0a0a 80%);
+  border-bottom: 1px solid var(--gold-border);
+  overflow: hidden;
+  padding: 4rem 2rem;
+}
+
+.bgOverlay {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=1920');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  filter: grayscale(40%);
+}
+
+.content {
+  position: relative;
+  z-index: 10;
+  max-width: 900px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--gold-border);
+  background: rgba(18, 18, 18, 0.8);
+  border-radius: 50px;
+  color: var(--gold-light);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  line-height: 1.15;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.goldText {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: block;
+}
+
+.subhead {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 650px;
+  line-height: 1.7;
+}
+
+.btnGroup {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.primaryBtn {
+  background: var(--gold-gradient);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 1rem 2.25rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-gold);
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(212, 175, 55, 0.35);
+}
+
+.secondaryBtn {
+  background: transparent;
+  border: 1px solid var(--gold-border);
+  color: var(--gold-light);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 1rem 2.25rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.secondaryBtn:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+  background: rgba(212, 175, 55, 0.08);
+}
