@@ -73,22 +73,6 @@ The application will start on `http://localhost:3000`.
 
 ---
 
-## 🔒 Security Rules & Admin Custom Claim Setup
-
-`firestore.rules` enforces:
-- Public read access for catalog products, approved reviews, and public store settings.
-- Customer access to read their own specific order details.
-- Admin-only write access for products, order status updates, coupons, and store settings.
-
-### Creating the First Admin:
-1. Register an account in the app or via Firebase Auth console.
-2. Trigger the Cloud Function `/setAdminClaim` with:
-   ```json
-   {
-     "email": "admin@oudelixir.com",
-     "secretKey": "oud_elixir_secret_2026"
-   }
-   ```
 3. Or use the built-in First Admin Setup tool on the `/admin/login` page!
 
 ---
