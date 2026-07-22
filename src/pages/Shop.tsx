@@ -13,22 +13,34 @@ export const Shop: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialCat = searchParams.get('category') || '';
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCat);
-  const [selectedFamily, setSelectedFamily] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<number>(5000);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCat ? [initialCat] : []);
+  const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('featured');
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const itemsPerPage = 6;
 
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+    setCurrentPage(1);
+  };
+
+  const toggleFamily = (fam: string) => {
+    setSelectedFamilies((prev) =>
+      prev.includes(fam) ? prev.filter((f) => f !== fam) : [...prev, fam]
+    );
+    setCurrentPage(1);
+  };
+
   // Filter & Sort logic
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => {
-        if (selectedCategory && p.category !== selectedCategory) return false;
-        if (selectedFamily && p.fragranceFamily !== selectedFamily) return false;
-        if ((p.salePrice || p.price) > maxPrice) return false;
+        if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) return false;
+        if (selectedFamilies.length > 0 && !selectedFamilies.includes(p.fragranceFamily)) return false;
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const matchTitle = p.title.toLowerCase().includes(q);
@@ -48,7 +60,7 @@ export const Shop: React.FC = () => {
         if (sortBy === 'rating') return b.rating - a.rating;
         return 0; // featured/default
       });
-  }, [products, selectedCategory, selectedFamily, maxPrice, searchQuery, sortBy]);
+  }, [products, selectedCategories, selectedFamilies, searchQuery, sortBy]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -58,9 +70,8 @@ export const Shop: React.FC = () => {
   }, [filteredProducts, currentPage]);
 
   const clearFilters = () => {
-    setSelectedCategory('');
-    setSelectedFamily('');
-    setMaxPrice(5000);
+    setSelectedCategories([]);
+    setSelectedFamilies([]);
     setSearchQuery('');
     setSortBy('featured');
     setCurrentPage(1);
@@ -83,10 +94,9 @@ export const Shop: React.FC = () => {
               {CATEGORIES.map((cat) => (
                 <label key={cat} className={styles.checkboxItem}>
                   <input
-                    type="radio"
-                    name="category"
-                    checked={selectedCategory === cat}
-                    onChange={() => { setSelectedCategory(selectedCategory === cat ? '' : cat); setCurrentPage(1); }}
+                    type="checkbox"
+                    checked={selectedCategories.includes(cat)}
+                    onChange={() => toggleCategory(cat)}
                   />
                   {cat}
                 </label>
@@ -100,32 +110,13 @@ export const Shop: React.FC = () => {
               {FAMILIES.map((fam) => (
                 <label key={fam} className={styles.checkboxItem}>
                   <input
-                    type="radio"
-                    name="family"
-                    checked={selectedFamily === fam}
-                    onChange={() => { setSelectedFamily(selectedFamily === fam ? '' : fam); setCurrentPage(1); }}
+                    type="checkbox"
+                    checked={selectedFamilies.includes(fam)}
+                    onChange={() => toggleFamily(fam)}
                   />
                   {fam}
                 </label>
               ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className={styles.filterGroupTitle}>Max Price (₹{maxPrice.toLocaleString('en-IN')})</h3>
-            <div className={styles.rangeGroup}>
-              <input
-                type="range"
-                min="1000"
-                max="5000"
-                step="100"
-                value={maxPrice}
-                onChange={(e) => { setMaxPrice(Number(e.target.value)); setCurrentPage(1); }}
-              />
-              <div className={styles.priceLabels}>
-                <span>₹1,000</span>
-                <span>₹5,000</span>
-              </div>
             </div>
           </div>
 

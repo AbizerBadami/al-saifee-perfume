@@ -111,6 +111,26 @@
   color: var(--text-muted);
 }
 
+.adminDot {
+  margin: 0 0.5rem;
+  opacity: 0.3;
+}
+
+.adminLink {
+  color: var(--text-muted);
+  opacity: 0.45;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.adminLink:hover {
+  opacity: 1;
+  color: var(--gold-primary);
+}
+
 @media (max-width: 900px) {
   .container {
     grid-template-columns: 1fr;

@@ -13,9 +13,11 @@ export const AdminLogin: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (isAdmin) {
-    navigate('/admin');
-  }
+  React.useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin');
+    }
+  }, [isAdmin, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export const AdminLogin: React.FC = () => {
           <FiShield />
         </div>
 
-        <h1 className={styles.title}>Atelier Admin Login</h1>
+        <h1 className={styles.title}>Admin Login</h1>
         <p className={styles.subtitle}>
           Protected portal for inventory, orders, and store settings
         </p>

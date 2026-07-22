@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiMail, FiCheck } from 'react-icons/fi';
+import { FiMail, FiCheck, FiLock } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import styles from './Footer.module.css';
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const { isAdmin } = useAuth();
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +43,6 @@ export const Footer: React.FC = () => {
             <li><Link to="/tracking" className={styles.linkItem}>Track Order</Link></li>
             <li><Link to="/checkout" className={styles.linkItem}>Guest Checkout</Link></li>
             <li><Link to="/wishlist" className={styles.linkItem}>My Wishlist</Link></li>
-            <li><Link to="/admin" className={styles.linkItem}>Admin Portal</Link></li>
           </ul>
         </div>
 
@@ -74,7 +75,14 @@ export const Footer: React.FC = () => {
       </div>
 
       <div className={styles.bottomBar}>
-        <div>© {new Date().getFullYear()} Al-Saifee Perfumes House. All rights reserved.</div>
+        <div>
+          © {new Date().getFullYear()} Al-Saifee Perfumes House. All rights reserved.
+          <span className={styles.adminDot}>•</span>
+          <Link to="/admin" className={styles.adminLink} title="Staff Access">
+            <FiLock style={{ fontSize: '0.75rem' }} />
+            <span>{isAdmin ? 'Admin Dashboard' : 'Staff Access'}</span>
+          </Link>
+        </div>
         <div>Complimentary Express Shipping Over ₹999</div>
       </div>
     </footer>

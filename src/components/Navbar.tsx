@@ -1,16 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FiShoppingBag, FiHeart, FiSearch, FiUser } from 'react-icons/fi';
+import { FiShoppingBag, FiHeart, FiSearch } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
-import { useAuth } from '../context/AuthContext';
 import styles from './Navbar.module.css';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const { itemCount, openCart } = useCart();
   const { wishlist, settings } = useStore();
-  const { isAdmin } = useAuth();
 
   return (
     <>
@@ -71,11 +69,6 @@ export const Navbar: React.FC = () => {
               <FiShoppingBag />
               {itemCount > 0 && <span className={styles.badge}>{itemCount}</span>}
             </button>
-
-            <Link to="/admin" className={styles.iconBtn} title={isAdmin ? 'Admin Dashboard' : 'Admin Login'}>
-              <FiUser />
-              {isAdmin && <span className={styles.badge} style={{ background: '#22c55e' }}>A</span>}
-            </Link>
           </div>
         </div>
       </header>
