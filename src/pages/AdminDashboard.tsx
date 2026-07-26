@@ -108,11 +108,14 @@ export const AdminDashboard: React.FC = () => {
     }));
   };
 
+  // Shipping Details Modal State
+  const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
+
   // Coupon Modal State
   const [couponModalOpen, setCouponModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Partial<Coupon>>({
     code: 'NEWCODE15',
-    discountType: 'percentage',
+    discountType: 'percent',
     discountValue: 15,
     minOrderAmount: 50,
     active: true,
@@ -252,7 +255,7 @@ export const AdminDashboard: React.FC = () => {
                       </select>
                     </td>
                     <td>
-                      <button className={styles.actionBtn} onClick={() => alert(`Address: ${order.shippingAddress.addressLine1}, ${order.shippingAddress.city}`)}>
+                      <button className={styles.actionBtn} onClick={() => setShippingModalOrder(order)}>
                         View Shipping
                       </button>
                     </td>
@@ -348,7 +351,7 @@ export const AdminDashboard: React.FC = () => {
             <h3>Promotional Coupons</h3>
             <button
               onClick={() => {
-                setEditingCoupon({ code: 'SAVE10', discountType: 'percentage', discountValue: 10, minOrderAmount: 0, active: true });
+                setEditingCoupon({ code: 'SAVE10', discountType: 'percent', discountValue: 10, minOrderAmount: 0, active: true });
                 setCouponModalOpen(true);
               }}
               style={{ background: 'var(--gold-gradient)', color: '#000', fontWeight: 700, padding: '0.5rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
@@ -372,8 +375,8 @@ export const AdminDashboard: React.FC = () => {
                 {coupons.map((c) => (
                   <tr key={c.id}>
                     <td><strong>{c.code}</strong></td>
-                    <td>{c.discountType}</td>
-                    <td>{c.discountType === 'percentage' ? `${c.discountValue}%` : `₹${c.discountValue.toLocaleString('en-IN')}`}</td>
+                    <td>{c.discountType === 'percent' ? 'Percentage' : 'Fixed Amount'}</td>
+                    <td>{c.discountType === 'percent' ? `${c.discountValue}%` : `₹${c.discountValue.toLocaleString('en-IN')}`}</td>
                     <td>{c.active ? 'Active' : 'Disabled'}</td>
                     <td>
                       <button className={styles.actionBtn} style={{ borderColor: '#ef4444', color: '#ef4444' }} onClick={() => deleteCoupon(c.id)}>
@@ -550,6 +553,66 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Fragrance Badges & Notes */}
+              <div className={styles.formGridFull} style={{ display: 'flex', gap: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={editingProduct.isBestSeller || false}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, isBestSeller: e.target.checked })}
+                  />
+                  Mark as Best Seller
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={editingProduct.isFeatured ?? true}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, isFeatured: e.target.checked })}
+                  />
+                  Feature on Homepage
+                </label>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Top Notes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(editingProduct.topNotes || []).join(', ')}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, topNotes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="e.g. Taif Rose, Cardamom, Bergamot"
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Middle Notes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(editingProduct.middleNotes || []).join(', ')}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, middleNotes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="e.g. Saffron, Wild Oud, Orris"
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Base Notes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(editingProduct.baseNotes || []).join(', ')}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, baseNotes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="e.g. Ambergris, Sandalwood, Musk"
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Available Bottle Sizes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(editingProduct.bottleSizes || []).join(', ')}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, bottleSizes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="e.g. 50ml Spray, 100ml Extrait"
+                />
+              </div>
+
               {/* Product Photos & Gallery Management */}
               <div className={styles.formGridFull} style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
                 <label style={{ fontSize: '0.85rem', color: 'var(--gold-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
@@ -714,7 +777,11 @@ export const AdminDashboard: React.FC = () => {
       {couponModalOpen && (
         <div className={styles.modalOverlay} onClick={() => setCouponModalOpen(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>New Promo Coupon</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3>Manage Promo Coupon</h3>
+              <button onClick={() => setCouponModalOpen(false)}><FiX /></button>
+            </div>
+
             <form onSubmit={handleCouponSubmit} className={styles.formGrid}>
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Promo Code</label>
@@ -722,12 +789,26 @@ export const AdminDashboard: React.FC = () => {
                   type="text"
                   value={editingCoupon.code || ''}
                   onChange={(e) => setEditingCoupon({ ...editingCoupon, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. ROYAL20"
                   required
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Discount Percentage (%)</label>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Discount Type</label>
+                <select
+                  value={editingCoupon.discountType || 'percent'}
+                  onChange={(e) => setEditingCoupon({ ...editingCoupon, discountType: e.target.value as 'percent' | 'fixed' })}
+                >
+                  <option value="percent">Percentage (%)</option>
+                  <option value="fixed">Fixed Amount (₹)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {editingCoupon.discountType === 'fixed' ? 'Discount Value (₹)' : 'Discount Value (%)'}
+                </label>
                 <input
                   type="number"
                   value={editingCoupon.discountValue || 10}
@@ -736,10 +817,101 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Min. Order Amount (₹)</label>
+                <input
+                  type="number"
+                  value={editingCoupon.minOrderAmount || 0}
+                  onChange={(e) => setEditingCoupon({ ...editingCoupon, minOrderAmount: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className={styles.formGridFull} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="couponActive"
+                  checked={editingCoupon.active ?? true}
+                  onChange={(e) => setEditingCoupon({ ...editingCoupon, active: e.target.checked })}
+                />
+                <label htmlFor="couponActive" style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
+                  Enable / Activate Coupon
+                </label>
+              </div>
+
               <button type="submit" className={styles.submitBtn}>
-                Create Coupon Code
+                Save Coupon Code
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Shipping Address Modal */}
+      {shippingModalOrder && (
+        <div className={styles.modalOverlay} onClick={() => setShippingModalOrder(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ color: 'var(--gold-light)' }}>Order Dispatch Details (#{shippingModalOrder.orderNumber})</h3>
+              <button onClick={() => setShippingModalOrder(null)} style={{ background: 'transparent', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}><FiX /></button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem' }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Recipient Name</span>
+                <div style={{ fontWeight: 600, marginTop: '0.2rem' }}>{shippingModalOrder.customerName}</div>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Email Address</span>
+                <div style={{ fontWeight: 600, marginTop: '0.2rem' }}>{shippingModalOrder.customerEmail}</div>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Contact Phone</span>
+                <div style={{ fontWeight: 600, marginTop: '0.2rem' }}>{shippingModalOrder.shippingAddress?.phone || 'Not provided'}</div>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Payment Status</span>
+                <div style={{ fontWeight: 600, marginTop: '0.2rem', color: shippingModalOrder.paymentStatus === 'Paid' ? '#10b981' : '#f59e0b' }}>
+                  {shippingModalOrder.paymentStatus || 'Paid'} ({shippingModalOrder.paymentMethod || 'Online'})
+                </div>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(212, 175, 55, 0.2)' }}>
+                <span style={{ color: 'var(--gold-primary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Shipping Address</span>
+                <div style={{ marginTop: '0.5rem', lineHeight: '1.5', color: '#fff' }}>
+                  {shippingModalOrder.shippingAddress?.addressLine1 ? (
+                    <>
+                      <div>{shippingModalOrder.shippingAddress.addressLine1}</div>
+                      {shippingModalOrder.shippingAddress.addressLine2 && <div>{shippingModalOrder.shippingAddress.addressLine2}</div>}
+                      <div>
+                        {shippingModalOrder.shippingAddress.city}, {shippingModalOrder.shippingAddress.state} - {shippingModalOrder.shippingAddress.postalCode}
+                      </div>
+                      <div>{shippingModalOrder.shippingAddress.country}</div>
+                    </>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)' }}>No detailed shipping address recorded for this order.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShippingModalOrder(null)}
+              style={{
+                width: '100%',
+                marginTop: '1.5rem',
+                background: 'var(--gold-gradient)',
+                color: '#000',
+                fontWeight: 700,
+                padding: '0.75rem',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Close Dispatch Details
+            </button>
           </div>
         </div>
       )}
