@@ -8,6 +8,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
+import { HelloButton } from './components/HelloButton';
+import { TaskList } from './components/TaskList';
 
 import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
@@ -31,6 +33,8 @@ export function App() {
                 <CartDrawer />
 
                 <main style={{ flex: 1 }}>
+                  <HelloButton />
+                  <TaskList />
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />

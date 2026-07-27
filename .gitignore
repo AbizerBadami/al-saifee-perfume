@@ -12,5 +12,7 @@ coverage/
 *.key
 *.cert
 *.p12
+# Firebase service account key (NEVER commit this)
+serviceAccountKey.json
 
 

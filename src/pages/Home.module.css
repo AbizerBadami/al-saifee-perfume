@@ -37,7 +37,6 @@
 
 .storyBanner {
   background: var(--bg-secondary);
-  border-y: 1px solid var(--gold-border);
   padding: 5rem 2rem;
   margin: 5rem 0;
   border-top: 1px solid var(--gold-border);

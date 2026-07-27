@@ -1,0 +1,16 @@
+{
+  "name": "al-saifee-backend",
+  "version": "1.0.0",
+  "description": "Local Express backend for Al-Saifee Perfumes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "firebase-admin": "^11.8.0",
+    "dotenv": "^17.2.3"
+  }
+}
