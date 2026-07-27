@@ -168,7 +168,44 @@
 }
 
 @media (max-width: 700px) {
+  .page {
+    margin: 1.5rem auto;
+    padding: 0 1.25rem;
+  }
+
   .formGrid {
     grid-template-columns: 1fr;
   }
+
+  .searchBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .statusCard {
+    padding: 1.5rem;
+  }
+
+  .statusHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stepNode {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+
+  .stepLabel {
+    font-size: 0.65rem;
+    top: 42px;
+  }
 }
+

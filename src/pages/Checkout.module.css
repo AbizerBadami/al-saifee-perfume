@@ -128,3 +128,19 @@
     gap: 2rem;
   }
 }
+
+@media (max-width: 600px) {
+  .page {
+    margin: 1.5rem auto;
+    padding: 0 1.25rem;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .formSection, .summarySection {
+    padding: 1.25rem;
+  }
+}
+

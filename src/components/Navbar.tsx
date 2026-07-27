@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FiShoppingBag, FiHeart, FiSearch } from 'react-icons/fi';
+import { FiShoppingBag, FiHeart, FiSearch, FiMenu, FiX } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import styles from './Navbar.module.css';
@@ -9,6 +9,12 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
   const { itemCount, openCart } = useCart();
   const { wishlist, settings } = useStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location]);
 
   return (
     <>
@@ -69,9 +75,71 @@ export const Navbar: React.FC = () => {
               <FiShoppingBag />
               {itemCount > 0 && <span className={styles.badge}>{itemCount}</span>}
             </button>
+
+            <button
+              className={styles.mobileMenuToggle}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle Navigation Menu"
+            >
+              {isMobileMenuOpen ? <FiX /> : <FiMenu />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className={styles.mobileDrawer}>
+            <ul className={styles.mobileNavLinks}>
+              <li>
+                <Link
+                  to="/"
+                  className={`${styles.mobileNavLink} ${location.pathname === '/' ? styles.activeMobileLink : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/shop"
+                  className={`${styles.mobileNavLink} ${location.pathname === '/shop' ? styles.activeMobileLink : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Collection
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/shop?category=Pure%20Attars"
+                  className={`${styles.mobileNavLink} ${location.search.includes('Attars') ? styles.activeMobileLink : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Pure Attars
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/shop?category=Oud%20Specials"
+                  className={`${styles.mobileNavLink} ${location.search.includes('Oud') ? styles.activeMobileLink : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Oud Specials
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/tracking"
+                  className={`${styles.mobileNavLink} ${location.pathname === '/tracking' ? styles.activeMobileLink : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Track Order
+                </Link>
+              </li>
+            </ul>
+          </div>
+        )}
       </header>
     </>
   );
 };
+

@@ -80,3 +80,20 @@
     gap: 2rem;
   }
 }
+
+@media (max-width: 600px) {
+  .storyBanner {
+    padding: 3rem 1.25rem;
+    margin: 3rem 0;
+  }
+
+  .productGrid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .storyTitle {
+    font-size: 1.75rem;
+  }
+}
+
