@@ -1,18 +1,96 @@
+# ============================================================
+# DEPENDENCIES & BUILD OUTPUT
+# ============================================================
 node_modules/
 build/
 dist/
 coverage/
 .DS_Store
 *.log
-# Environment files & Secrets
+
+# ============================================================
+# ENVIRONMENT & SENSITIVE CREDENTIALS (CRITICAL)
+# ============================================================
+# Local environment variables - NEVER commit these
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Backend environment files
+backend/.env
+backend/.env.local
+
+# Firebase service account key (HIGHEST PRIORITY - NEVER COMMIT)
+# This file contains full database access credentials
+serviceAccountKey.json
+firebase-key.json
+
+# ============================================================
+# PRIVATE KEYS & CERTIFICATES
+# ============================================================
 *.pem
 *.key
 *.cert
 *.p12
-# Firebase service account key (NEVER commit this)
-serviceAccountKey.json
+*.pfx
+*.jks
+*.keystore
+private-key.txt
+id_rsa
+id_rsa.pub
 
+# ============================================================
+# STRIPE & PAYMENT SECRETS
+# ============================================================
+.stripe-secret
+stripe-secret.txt
+webhook-secret.txt
 
+# ============================================================
+# CREDENTIALS & TOKENS
+# ============================================================
+credentials.json
+secrets.json
+token.json
+.auth
+.credentials
+.tokens
+
+# ============================================================
+# IDE & EDITOR FILES
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.settings
+*.sublime-workspace
+*.sublime-project
+
+# ============================================================
+# OS SPECIFIC
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.directory
+
+# ============================================================
+# TEMPORARY FILES
+# ============================================================
+tmp/
+temp/
+*.tmp
+.cache
+.parcel-cache
+
+# ============================================================
+# ONLY INCLUDE .env.example AS TEMPLATE (WITH SAFE VALUES)
+# ============================================================
+!.env.example
