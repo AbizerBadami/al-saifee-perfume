@@ -1,0 +1,40 @@
+.page {
+  max-width: 1200px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+  min-height: 80vh;
+}
+
+.titleArea {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
+  color: var(--gold-light);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 5rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+}

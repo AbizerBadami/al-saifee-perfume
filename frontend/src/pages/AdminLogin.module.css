@@ -1,0 +1,74 @@
+.page {
+  max-width: 480px;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+  min-height: 75vh;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-dark), var(--shadow-gold);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: var(--gold-light);
+  text-align: center;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.submitBtn {
+  background: var(--gold-gradient);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.9rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-gold);
+}
+
+.demoBanner {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: var(--gold-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.toggleLink {
+  color: var(--gold-primary);
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: underline;
+}

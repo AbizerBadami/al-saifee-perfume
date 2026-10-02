@@ -1,0 +1,23 @@
+{
+  "name": "al-saifee-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init:local": "wrangler d1 execute al-saifee-db --local --file=src/db/schema.sql",
+    "db:seed:local": "wrangler d1 execute al-saifee-db --local --file=src/db/seed.sql",
+    "db:init:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/schema.sql",
+    "db:seed:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/seed.sql",
+    "db:reset:local": "npm run db:init:local && npm run db:seed:local"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261001.0",
+    "wrangler": "^4.14.0",
+    "typescript": "^5.8.2"
+  }
+}

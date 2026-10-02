@@ -1,0 +1,28 @@
+{
+  "name": "al-saifee-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // D1 Database binding
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "al-saifee-db",
+      // Replace with your actual database_id after running:
+      //   wrangler d1 create al-saifee-db
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+    }
+  ],
+
+  // Environment variables (non-secret, for dev)
+  "vars": {
+    "FRONTEND_URL": "http://localhost:3000",
+    "JWT_EXPIRES_IN": "86400"
+  }
+
+  // Secrets (set via `wrangler secret put <KEY>`):
+  //   - JWT_SECRET
+  //   - RAZORPAY_KEY_ID
+  //   - RAZORPAY_KEY_SECRET
+}
