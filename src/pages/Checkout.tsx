@@ -6,7 +6,7 @@ import { useStore } from '../context/StoreContext';
 import styles from './Checkout.module.css';
 
 export const Checkout: React.FC = () => {
-  const { cart, subtotal, discountAmount, tax, shippingFee, total, couponCode, clearCart } = useCart();
+  const { cart, subtotal, tax, shippingFee, total, clearCart } = useCart();
   const { createOrder } = useStore();
   const navigate = useNavigate();
 
@@ -62,7 +62,7 @@ export const Checkout: React.FC = () => {
           shippingAddress: formData,
           items: cart,
           subtotal,
-          discount: discountAmount,
+          discount: 0,
           tax,
           shippingFee,
           total,
@@ -106,7 +106,7 @@ export const Checkout: React.FC = () => {
           shippingAddress: formData,
           items: cart,
           subtotal,
-          discount: discountAmount,
+          discount: 0,
           tax,
           shippingFee,
           total,
@@ -267,12 +267,7 @@ export const Checkout: React.FC = () => {
             <span>₹{subtotal.toLocaleString('en-IN')}</span>
           </div>
 
-          {discountAmount > 0 && (
-            <div className={styles.row} style={{ color: 'var(--gold-primary)' }}>
-              <span>Coupon Discount ({couponCode})</span>
-              <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
-            </div>
-          )}
+
 
           <div className={styles.row}>
             <span>Estimated Tax (10%)</span>

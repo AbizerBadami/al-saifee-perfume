@@ -41,7 +41,7 @@ export const HelloButton: React.FC = () => {
     try {
       const response = await fetch('/api/perfumes');
       if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
-      const data = await response.json();
+      const data = await response.json() as { perfumes: Perfume[] };
       setPerfumes(data.perfumes);
     } catch (err) {
       console.error('Fetch failed:', err);

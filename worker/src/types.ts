@@ -1,6 +1,7 @@
 // ============================================================
 // Cloudflare Worker Bindings & Database Row Types
 // ============================================================
+/// <reference types="@cloudflare/workers-types" />
 
 /** Cloudflare Worker environment bindings */
 export type Bindings = {
@@ -112,6 +113,15 @@ export interface AdminRow {
   created_at: string;
 }
 
+export interface TaskRow {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+  completed: number; // 0 or 1
+  created_at: string;
+}
+
 // ---------- API Response helpers ----------
 
 /** Transforms a ProductRow into the JSON shape the frontend expects */
@@ -200,5 +210,16 @@ export function toSettingsJSON(row: StoreSettingsRow) {
     taxRate: row.tax_rate,
     freeShippingThreshold: row.free_shipping_threshold,
     promoMessage: row.promo_message,
+  };
+}
+
+export function toTaskJSON(row: TaskRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    completed: Boolean(row.completed),
+    createdAt: row.created_at,
   };
 }

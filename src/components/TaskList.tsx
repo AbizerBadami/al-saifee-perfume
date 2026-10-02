@@ -33,10 +33,10 @@ export const TaskList: React.FC = () => {
     try {
       const response = await fetch('/api/tasks');
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        const errData = await response.json().catch(() => ({})) as { error?: string };
         throw new Error(errData.error || `Server responded with status ${response.status}`);
       }
-      const data = await response.json();
+      const data = await response.json() as { tasks: Task[] };
       setTasks(data.tasks);
     } catch (err) {
       console.error('Fetch tasks failed:', err);
