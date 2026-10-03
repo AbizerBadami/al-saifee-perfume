@@ -52,7 +52,6 @@ export interface OrderRow {
   customer_email: string;
   shipping_address: string; // JSON object string
   subtotal: number;
-  discount: number;
   tax: number;
   shipping_fee: number;
   total: number;
@@ -86,15 +85,6 @@ export interface ReviewRow {
   created_at: string;
 }
 
-export interface CouponRow {
-  id: string;
-  code: string;
-  discount_type: string;
-  discount_value: number;
-  min_order_amount: number;
-  active: number; // 0 or 1
-  created_at: string;
-}
 
 export interface StoreSettingsRow {
   id: number;
@@ -151,17 +141,6 @@ export function toProductJSON(row: ProductRow) {
   };
 }
 
-export function toCouponJSON(row: CouponRow) {
-  return {
-    id: row.id,
-    code: row.code,
-    discountType: row.discount_type,
-    discountValue: row.discount_value,
-    minOrderAmount: row.min_order_amount,
-    active: Boolean(row.active),
-    createdAt: row.created_at,
-  };
-}
 
 export function toReviewJSON(row: ReviewRow) {
   return {
@@ -190,7 +169,6 @@ export function toOrderJSON(row: OrderRow, items: OrderItemRow[]) {
       price: i.price,
     })),
     subtotal: row.subtotal,
-    discount: row.discount,
     tax: row.tax,
     shippingFee: row.shipping_fee,
     total: row.total,

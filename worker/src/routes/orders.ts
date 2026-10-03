@@ -70,24 +70,23 @@ orders.post('/', async (c) => {
   const now = new Date().toISOString();
 
   const subtotal: number = body.subtotal ?? 0;
-  const discount: number = body.discount ?? 0;
   const taxRate = 0.10;
-  const taxableAmount = Math.max(0, subtotal - discount);
+  const taxableAmount = subtotal;
   const tax: number = body.tax ?? Math.round(taxableAmount * taxRate * 100) / 100;
   const shippingFee: number = body.shippingFee ?? 0;
   const total: number = body.total ?? taxableAmount + tax + shippingFee;
 
   await c.env.DB.prepare(`
     INSERT INTO orders (id, order_number, customer_name, customer_email, shipping_address,
-      subtotal, discount, tax, shipping_fee, total, status, payment_status, payment_method,
+      subtotal, tax, shipping_fee, total, status, payment_status, payment_method,
       razorpay_order_id, razorpay_payment_id, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Processing', ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Processing', ?, ?, ?, ?, ?)
   `).bind(
     id, orderNumber,
     body.customerName || 'Valued Guest',
     body.customerEmail || '',
     JSON.stringify(body.shippingAddress || {}),
-    subtotal, discount, tax, shippingFee, total,
+    subtotal, tax, shippingFee, total,
     body.paymentStatus || 'Paid',
     body.paymentMethod || 'Razorpay',
     body.razorpayOrderId || null,

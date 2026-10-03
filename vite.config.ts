@@ -20,7 +20,9 @@ export default defineConfig(() => {
       // Proxy /api requests to the local Express backend
       proxy: {
         '/api': {
-          target: 'http://localhost:4000',
+          // Pointing to the Cloudflare Worker instead of the Express backend
+          // Using 127.0.0.1 instead of localhost prevents IPv6 ECONNREFUSED errors in Node 18+
+          target: 'http://127.0.0.1:8787',
           changeOrigin: true,
         },
       },

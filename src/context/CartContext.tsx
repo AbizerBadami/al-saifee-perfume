@@ -11,10 +11,7 @@ interface CartContextType {
   removeFromCart: (productId: string, selectedSize: string) => void;
   updateQuantity: (productId: string, selectedSize: string, delta: number) => void;
   clearCart: () => void;
-  couponCode: string;
-  discountAmount: number;
-  applyCoupon: (code: string, activeCoupons?: any[]) => { success: boolean; message: string };
-  removeCoupon: () => void;
+
   subtotal: number;
   tax: number;
   shippingFee: number;
@@ -37,12 +34,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState<string>(() => {
-    return localStorage.getItem('oud_elixir_coupon') || '';
-  });
-  const [discountPercent, setDiscountPercent] = useState<number>(() => {
-    return Number(localStorage.getItem('oud_elixir_discount_pct')) || 0;
-  });
+
 
   const freeShippingThreshold = 50;
 
@@ -50,15 +42,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('oud_elixir_cart', JSON.stringify(cart));
   }, [cart]);
 
-  useEffect(() => {
-    if (couponCode) {
-      localStorage.setItem('oud_elixir_coupon', couponCode);
-      localStorage.setItem('oud_elixir_discount_pct', String(discountPercent));
-    } else {
-      localStorage.removeItem('oud_elixir_coupon');
-      localStorage.removeItem('oud_elixir_discount_pct');
-    }
-  }, [couponCode, discountPercent]);
+
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
@@ -102,13 +86,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCart([]);
-    setCouponCode('');
-    setDiscountPercent(0);
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = Math.round((subtotal * discountPercent) / 100 * 100) / 100;
-  const taxableSubtotal = Math.max(0, subtotal - discountAmount);
+  const taxableSubtotal = subtotal;
   const tax = Math.round(taxableSubtotal * 0.10 * 100) / 100; // 10% tax
   const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 15;
   const total = taxableSubtotal + tax + shippingFee;
@@ -116,40 +97,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const freeShippingProgress = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
   const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
-  const applyCoupon = (code: string, activeCoupons?: any[]) => {
-    const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) {
-      return { success: false, message: 'Please enter a coupon code.' };
-    }
 
-    if (cleanCode === 'WELCOME10') {
-      setCouponCode('WELCOME10');
-      setDiscountPercent(10);
-      return { success: true, message: '10% promotional discount applied!' };
-    }
-
-    if (cleanCode === 'ROYAL50' && subtotal >= 250) {
-      setCouponCode('ROYAL50');
-      setDiscountPercent(20);
-      return { success: true, message: '$50 VIP discount applied!' };
-    }
-
-    if (activeCoupons && activeCoupons.length) {
-      const match = activeCoupons.find((c) => c.code.toUpperCase() === cleanCode && c.active);
-      if (match) {
-        setCouponCode(match.code);
-        setDiscountPercent(match.discountValue || 10);
-        return { success: true, message: `Coupon ${match.code} applied successfully!` };
-      }
-    }
-
-    return { success: false, message: 'Invalid or expired promotional code.' };
-  };
-
-  const removeCoupon = () => {
-    setCouponCode('');
-    setDiscountPercent(0);
-  };
 
   return (
     <CartContext.Provider
@@ -163,10 +111,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         updateQuantity,
         clearCart,
-        couponCode,
-        discountAmount,
-        applyCoupon,
-        removeCoupon,
+
         subtotal,
         tax,
         shippingFee,

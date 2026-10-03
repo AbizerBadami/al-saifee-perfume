@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Context, Next } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import type { Bindings, Variables } from '../types';
 
 /** Encode bytes to base64url */
@@ -90,7 +91,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
 // ---------- Hono middleware ----------
 
 /** Protect routes: requires valid JWT in `Authorization: Bearer <token>` */
-export async function authGuard(c: Context<{ Bindings: Bindings; Variables: Variables }>, next: Next) {
+export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized — missing token' }, 401);
@@ -107,4 +108,4 @@ export async function authGuard(c: Context<{ Bindings: Bindings; Variables: Vari
   c.set('adminEmail', payload.email as string);
 
   await next();
-}
+});

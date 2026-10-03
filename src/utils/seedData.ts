@@ -1,4 +1,4 @@
-import { Product, Coupon, StoreSettings } from '../types';
+import { Product, StoreSettings } from '../types';
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
@@ -208,26 +208,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
-export const INITIAL_COUPONS: Coupon[] = [
-  {
-    id: 'coup-1',
-    code: 'WELCOME10',
-    discountType: 'percent',
-    discountValue: 10,
-    minOrderAmount: 0,
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'coup-2',
-    code: 'ROYAL300',
-    discountType: 'fixed',
-    discountValue: 300,
-    minOrderAmount: 2000,
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-];
+
 
 export const INITIAL_SETTINGS: StoreSettings = {
   storeName: 'Al-Saifee Perfumes',
@@ -235,5 +216,5 @@ export const INITIAL_SETTINGS: StoreSettings = {
   currencySymbol: '₹',
   taxRate: 0.1, // 10%
   freeShippingThreshold: 999,
-  promoMessage: 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • USE CODE WELCOME10 FOR 10% OFF',
+  promoMessage: 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999',
 };

@@ -44,81 +44,102 @@ export const Checkout: React.FC = () => {
     e.preventDefault();
     setIsProcessing(true);
 
-    const orderNumber = 'ASP-' + Math.floor(100000 + Math.random() * 900000);
-
-    // Official Razorpay Checkout API Integration
-    const options = {
-      key: 'rzp_test_AlSaifeeKey', // Razorpay Test Key ID
-      amount: total * 100, // Amount in paise
-      currency: 'INR',
-      name: 'Al-Saifee Perfumes',
-      description: `Acquisition Payment for Order ${orderNumber}`,
-      image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=200',
-      handler: async function (response: any) {
-        const newOrder = await createOrder({
-          orderNumber,
+    try {
+      const initRes = await fetch('/api/checkout/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          currency: 'INR',
           customerName: formData.fullName,
           customerEmail: formData.email,
-          shippingAddress: formData,
-          items: cart,
-          subtotal,
-          discount: 0,
-          tax,
-          shippingFee,
-          total,
-          status: 'Processing',
-          paymentStatus: 'Paid',
-          paymentMethod: 'Razorpay Official Gateway (' + (response.razorpay_payment_id || 'RZP_SUCCESS') + ')',
-        });
+        })
+      });
 
-        clearCart();
-        setIsProcessing(false);
-        navigate(`/success?orderId=${newOrder.id}`);
-      },
-      prefill: {
-        name: formData.fullName,
-        email: formData.email,
-        contact: formData.phone,
-      },
-      notes: {
-        address: `${formData.addressLine1}, ${formData.city}`,
-      },
-      theme: {
-        color: '#d4af37',
-      },
-      modal: {
-        ondismiss: function () {
-          setIsProcessing(false);
+      if (!initRes.ok) {
+        throw new Error('Failed to initialize payment gateway');
+      }
+
+      const data = (await initRes.json()) as {
+        keyId: string;
+        amount: number;
+        currency: string;
+        orderId: string;
+      };
+      
+      const orderNumber = 'ASP-' + Math.floor(100000 + Math.random() * 900000);
+
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: 'Al-Saifee Perfumes',
+        description: `Acquisition Payment for Order ${orderNumber}`,
+        order_id: data.orderId,
+        image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=200',
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch('/api/checkout/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+            });
+
+            if (!verifyRes.ok) throw new Error('Payment verification failed');
+
+            const newOrder = await createOrder({
+              orderNumber,
+              customerName: formData.fullName,
+              customerEmail: formData.email,
+              shippingAddress: formData,
+              items: cart,
+              subtotal,
+              tax,
+              shippingFee,
+              total,
+              status: 'Processing',
+              paymentStatus: 'Paid',
+              paymentMethod: 'Razorpay Gateway',
+            });
+
+            clearCart();
+            setIsProcessing(false);
+            navigate(`/success?orderId=${newOrder.id}`);
+          } catch (err) {
+            console.error('Payment verification failed', err);
+            setIsProcessing(false);
+            alert('Payment verification failed. Contact support.');
+          }
         },
-      },
-    };
+        prefill: {
+          name: formData.fullName,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        notes: {
+          address: `${formData.addressLine1}, ${formData.city}`,
+        },
+        theme: { color: '#d4af37' },
+        modal: {
+          ondismiss: function () { setIsProcessing(false); },
+        },
+      };
 
-    if (typeof (window as any).Razorpay !== 'undefined') {
-      const rzpInstance = new (window as any).Razorpay(options);
-      rzpInstance.open();
-    } else {
-      // Fallback if SDK script is loading
-      setTimeout(async () => {
-        const newOrder = await createOrder({
-          orderNumber,
-          customerName: formData.fullName,
-          customerEmail: formData.email,
-          shippingAddress: formData,
-          items: cart,
-          subtotal,
-          discount: 0,
-          tax,
-          shippingFee,
-          total,
-          status: 'Processing',
-          paymentStatus: 'Paid',
-          paymentMethod: 'Razorpay Gateway (RZP_TEST_PAYMENT)',
-        });
-
-        clearCart();
+      if (typeof (window as any).Razorpay !== 'undefined') {
+        const rzpInstance = new (window as any).Razorpay(options);
+        rzpInstance.open();
+      } else {
+        alert('Payment gateway is still loading. Please try again in a moment.');
         setIsProcessing(false);
-        navigate(`/success?orderId=${newOrder.id}`);
-      }, 1000);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsProcessing(false);
+      alert('Could not connect to payment gateway. Please try again.');
     }
   };
 

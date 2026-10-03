@@ -13,7 +13,6 @@ export const CartDrawer: React.FC = () => {
     removeFromCart,
     updateQuantity,
     subtotal,
-    discountAmount,
     tax,
     shippingFee,
     total,

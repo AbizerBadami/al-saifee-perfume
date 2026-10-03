@@ -11,7 +11,6 @@ import type { Bindings } from './types';
 import products from './routes/products';
 import orders from './routes/orders';
 import reviews from './routes/reviews';
-import coupons from './routes/coupons';
 import settings from './routes/settings';
 import auth from './routes/auth';
 import checkout from './routes/checkout';
@@ -52,7 +51,6 @@ app.get('/', (c) => {
       products: '/api/products',
       orders: '/api/orders',
       reviews: '/api/reviews',
-      coupons: '/api/coupons',
       settings: '/api/settings',
       auth: '/api/auth',
       checkout: '/api/checkout',
@@ -65,7 +63,6 @@ app.get('/', (c) => {
 app.route('/api/products', products);
 app.route('/api/orders', orders);
 app.route('/api/reviews', reviews);
-app.route('/api/coupons', coupons);
 app.route('/api/settings', settings);
 app.route('/api/auth', auth);
 app.route('/api/checkout', checkout);

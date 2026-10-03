@@ -2,7 +2,7 @@ import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { FiCheck, FiDownload, FiTruck, FiShoppingBag } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
-import { downloadInvoicePDF } from '../utils/pdfGenerator';
+
 import styles from './Success.module.css';
 
 export const Success: React.FC = () => {
@@ -42,9 +42,7 @@ export const Success: React.FC = () => {
             </div>
 
             <div className={styles.btnGroup}>
-              <button className={styles.downloadBtn} onClick={() => downloadInvoicePDF(order)}>
-                <FiDownload /> Download Official Invoice (PDF)
-              </button>
+
 
               <Link to={`/tracking?orderId=${order.orderNumber}`} className={styles.trackBtn}>
                 <FiTruck /> Track Dispatch Status

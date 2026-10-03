@@ -1,16 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../utils/firebase';
 
 interface AuthContextType {
-  user: User | null;
+  user: { email: string; id: string } | null;
   isAdmin: boolean;
   loading: boolean;
   loginAdmin: (email: string, pass: string) => Promise<void>;
@@ -21,103 +12,78 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('oud_elixir_is_admin') === 'true';
-  });
+  const [user, setUser] = useState<{ email: string; id: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const idTokenResult = await currentUser.getIdTokenResult(true);
-          const hasAdminClaim = Boolean(idTokenResult.claims.admin);
-
-          // Check admin collection in Firestore
-          const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-          const isAdminDoc = adminDoc.exists();
-
-          const adminStatus = hasAdminClaim || isAdminDoc;
-          setIsAdmin(adminStatus);
-          localStorage.setItem('oud_elixir_is_admin', adminStatus ? 'true' : 'false');
-        } catch (err) {
-          console.warn('Admin check error:', err);
-          setIsAdmin(false);
-          localStorage.setItem('oud_elixir_is_admin', 'false');
-        }
-      } else {
-        setIsAdmin(false);
-        localStorage.removeItem('oud_elixir_is_admin');
+    const checkAuth = async () => {
+      const token = localStorage.getItem('oud_elixir_admin_token');
+      if (!token) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser({ email: data.email, id: data.id });
+          setIsAdmin(true);
+        } else {
+          localStorage.removeItem('oud_elixir_admin_token');
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        console.error('Auth verification failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
   }, []);
 
   const loginAdmin = async (email: string, pass: string) => {
-    try {
-      const res = await signInWithEmailAndPassword(auth, email, pass);
-      setUser(res.user);
-      // Check if user is admin in Firestore
-      const adminDoc = await getDoc(doc(db, 'admins', res.user.uid));
-      if (adminDoc.exists()) {
-        setIsAdmin(true);
-        localStorage.setItem('oud_elixir_is_admin', 'true');
-      } else {
-        setIsAdmin(false);
-        localStorage.setItem('oud_elixir_is_admin', 'false');
-        throw new Error('Access denied: Unauthorized admin user.');
-      }
-    } catch (err: any) {
-      // In local development / demo mode (or invalid Firebase API key), grant admin access
-      console.warn('Firebase login bypassed for local development/demo mode:', err);
-      setIsAdmin(true);
-      localStorage.setItem('oud_elixir_is_admin', 'true');
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Login failed');
     }
+
+    localStorage.setItem('oud_elixir_admin_token', data.token);
+    setUser(data.admin);
+    setIsAdmin(true);
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch { }
+    localStorage.removeItem('oud_elixir_admin_token');
     setUser(null);
     setIsAdmin(false);
-    localStorage.removeItem('oud_elixir_is_admin');
   };
 
   const setupFirstAdmin = async (email: string, pass: string) => {
-    try {
-      let resUser: User;
-      try {
-        const res = await createUserWithEmailAndPassword(auth, email, pass);
-        resUser = res.user;
-      } catch (authErr: any) {
-        if (authErr.code === 'auth/email-already-in-use') {
-          const res = await signInWithEmailAndPassword(auth, email, pass);
-          resUser = res.user;
-        } else {
-          throw authErr;
-        }
-      }
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
 
-      // Record in admins collection
-      await setDoc(doc(db, 'admins', resUser.uid), {
-        email: resUser.email,
-        createdAt: new Date().toISOString(),
-      });
-
-      setIsAdmin(true);
-      localStorage.setItem('oud_elixir_is_admin', 'true');
-      return { success: true, message: `Admin account created and authorized for ${email}` };
-    } catch (err: any) {
-      // Fallback local grant for testing
-      setIsAdmin(true);
-      localStorage.setItem('oud_elixir_is_admin', 'true');
-      return { success: true, message: `Local Admin session granted for ${email}` };
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Registration failed');
     }
+
+    localStorage.setItem('oud_elixir_admin_token', data.token);
+    setUser(data.admin);
+    setIsAdmin(true);
+    return { success: true, message: data.message };
   };
 
   return (

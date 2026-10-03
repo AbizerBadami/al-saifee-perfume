@@ -55,7 +55,6 @@ export interface Order {
   shippingAddress: ShippingAddress;
   items: CartItem[];
   subtotal: number;
-  discount: number;
   tax: number;
   shippingFee: number;
   total: number;
