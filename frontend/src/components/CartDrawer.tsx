@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiX, FiTrash2, FiShoppingBag, FiCheckCircle } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
-import { useStore } from '../context/StoreContext';
 import styles from './CartDrawer.module.css';
 
 export const CartDrawer: React.FC = () => {
@@ -13,30 +12,16 @@ export const CartDrawer: React.FC = () => {
     removeFromCart,
     updateQuantity,
     subtotal,
-    discountAmount,
     tax,
     shippingFee,
     total,
     freeShippingThreshold,
     freeShippingProgress,
-    couponCode,
-    applyCoupon,
-    removeCoupon,
   } = useCart();
 
-  const { coupons } = useStore();
   const navigate = useNavigate();
-  const [inputCode, setInputCode] = useState('');
-  const [couponMsg, setCouponMsg] = useState<{ success: boolean; text: string } | null>(null);
 
   if (!isCartOpen) return null;
-
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = applyCoupon(inputCode, coupons);
-    setCouponMsg({ success: res.success, text: res.message });
-    if (res.success) setInputCode('');
-  };
 
   const handleCheckoutClick = () => {
     closeCart();
@@ -126,41 +111,10 @@ export const CartDrawer: React.FC = () => {
 
         {cart.length > 0 && (
           <div className={styles.footer}>
-            <form className={styles.couponArea} onSubmit={handleApplyCoupon}>
-              <input
-                type="text"
-                placeholder="Promo code (e.g. WELCOME10)"
-                className={styles.couponInput}
-                value={inputCode}
-                onChange={(e) => setInputCode(e.target.value)}
-              />
-              <button type="submit" className={styles.applyBtn}>Apply</button>
-            </form>
-
-            {couponCode && (
-              <div className={styles.summaryRow} style={{ color: 'var(--gold-primary)' }}>
-                <span>Coupon Applied ({couponCode})</span>
-                <button onClick={removeCoupon} style={{ color: '#ef4444', fontSize: '0.75rem', textDecoration: 'underline' }}>Remove</button>
-              </div>
-            )}
-
-            {couponMsg && (
-              <div style={{ fontSize: '0.75rem', color: couponMsg.success ? 'var(--gold-primary)' : '#ef4444' }}>
-                {couponMsg.text}
-              </div>
-            )}
-
             <div className={styles.summaryRow}>
               <span>Subtotal</span>
               <span>₹{subtotal.toLocaleString('en-IN')}</span>
             </div>
-
-            {discountAmount > 0 && (
-              <div className={styles.summaryRow} style={{ color: 'var(--gold-primary)' }}>
-                <span>Discount</span>
-                <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
-              </div>
-            )}
 
             <div className={styles.summaryRow}>
               <span>Estimated Tax (10%)</span>

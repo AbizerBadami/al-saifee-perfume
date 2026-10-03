@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_email      TEXT NOT NULL,
   shipping_address    TEXT NOT NULL DEFAULT '{}',   -- JSON object
   subtotal            REAL NOT NULL,
-  discount            REAL NOT NULL DEFAULT 0,
   tax                 REAL NOT NULL,
   shipping_fee        REAL NOT NULL DEFAULT 0,
   total               REAL NOT NULL,
@@ -73,16 +72,6 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 
--- Coupon / promo codes
-CREATE TABLE IF NOT EXISTS coupons (
-  id               TEXT PRIMARY KEY,
-  code             TEXT UNIQUE NOT NULL,
-  discount_type    TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
-  discount_value   REAL NOT NULL,
-  min_order_amount REAL NOT NULL DEFAULT 0,
-  active           INTEGER NOT NULL DEFAULT 1,
-  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
-);
 
 -- Store-wide settings (single-row table)
 CREATE TABLE IF NOT EXISTS store_settings (

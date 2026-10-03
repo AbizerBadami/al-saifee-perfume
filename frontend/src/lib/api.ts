@@ -81,18 +81,7 @@ export const reviewsAPI = {
   delete: (id: string) => apiFetch<any>(`/reviews/${id}`, { method: 'DELETE' }),
 };
 
-// ---------- Coupons ----------
 
-export const couponsAPI = {
-  list: () => apiFetch<{ coupons: any[]; total: number }>('/coupons'),
-  validate: (code: string, cartTotal: number) =>
-    apiFetch<{ valid: boolean; message?: string; code?: string; discountType?: string; discountValue?: number }>(
-      '/coupons/validate', { method: 'POST', body: JSON.stringify({ code, cartTotal }) }
-    ),
-  create: (data: any) => apiFetch<any>('/coupons', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => apiFetch<any>(`/coupons/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => apiFetch<any>(`/coupons/${id}`, { method: 'DELETE' }),
-};
 
 // ---------- Settings ----------
 
@@ -118,12 +107,26 @@ export const authAPI = {
 // ---------- Checkout (Razorpay) ----------
 
 export const checkoutAPI = {
-  createOrder: (amount: number, currency: string, customerName: string, customerEmail: string) =>
+  createOrder: (items: any[], currency: string, customerName: string, customerEmail: string) =>
     apiFetch<{ orderId: string; amount: number; currency: string; keyId: string }>(
-      '/checkout/create-order', { method: 'POST', body: JSON.stringify({ amount, currency, customerName, customerEmail }) }
+      '/checkout/create-order', { method: 'POST', body: JSON.stringify({ items, currency, customerName, customerEmail }) }
     ),
-  verify: (razorpay_order_id: string, razorpay_payment_id: string, razorpay_signature: string) =>
-    apiFetch<{ verified: boolean; razorpayOrderId: string; razorpayPaymentId: string }>(
-      '/checkout/verify', { method: 'POST', body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) }
+  verify: (
+    razorpay_order_id: string,
+    razorpay_payment_id: string,
+    razorpay_signature: string,
+    items: any[],
+    shippingAddress: any,
+    customerName: string,
+    customerEmail: string
+  ) =>
+    apiFetch<{ verified: boolean; orderId?: string; orderNumber?: string; total?: number; error?: string }>(
+      '/checkout/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          razorpay_order_id, razorpay_payment_id, razorpay_signature,
+          items, shippingAddress, customerName, customerEmail
+        })
+      }
     ),
 };

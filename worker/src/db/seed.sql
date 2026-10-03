@@ -86,12 +86,7 @@ VALUES
    '["https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&q=80&w=800","https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&q=80&w=800"]',
    1, 1, 4.9, 38);
 
--- 2 default coupons
-INSERT OR IGNORE INTO coupons (id, code, discount_type, discount_value, min_order_amount, active)
-VALUES
-  ('coup-1', 'WELCOME10', 'percent', 10, 0, 1),
-  ('coup-2', 'ROYAL300',  'fixed',  300, 2000, 1);
 
 -- Default store settings
 INSERT OR IGNORE INTO store_settings (id, store_name, support_email, currency_symbol, tax_rate, free_shipping_threshold, promo_message)
-VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.com', '₹', 0.10, 999, 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • USE CODE WELCOME10 FOR 10% OFF');
+VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.com', '₹', 0.10, 999, 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • 100% NON-ALCOHOLIC PURE PERFUME OILS');

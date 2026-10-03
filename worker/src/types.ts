@@ -115,6 +115,10 @@ export interface TaskRow {
 // ---------- API Response helpers ----------
 
 /** Transforms a ProductRow into the JSON shape the frontend expects */
+function safeJsonParse(str: string, fallback: any[] = []): any {
+  try { return JSON.parse(str); } catch { return fallback; }
+}
+
 export function toProductJSON(row: ProductRow) {
   return {
     id: row.id,
@@ -126,13 +130,13 @@ export function toProductJSON(row: ProductRow) {
     salePrice: row.sale_price,
     stock: row.stock,
     description: row.description,
-    topNotes: JSON.parse(row.top_notes),
-    middleNotes: JSON.parse(row.middle_notes),
-    baseNotes: JSON.parse(row.base_notes),
+    topNotes: safeJsonParse(row.top_notes),
+    middleNotes: safeJsonParse(row.middle_notes),
+    baseNotes: safeJsonParse(row.base_notes),
     longevity: row.longevity,
     projection: row.projection,
-    bottleSizes: JSON.parse(row.bottle_sizes),
-    images: JSON.parse(row.images),
+    bottleSizes: safeJsonParse(row.bottle_sizes),
+    images: safeJsonParse(row.images),
     isFeatured: Boolean(row.is_featured),
     isBestSeller: Boolean(row.is_best_seller),
     rating: row.rating,

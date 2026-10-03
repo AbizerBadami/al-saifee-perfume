@@ -5,15 +5,14 @@
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { productsAPI, ordersAPI, reviewsAPI, couponsAPI, settingsAPI } from '../lib/api';
-import { Product, Order, Review, Coupon, StoreSettings } from '../types';
-import { INITIAL_PRODUCTS, INITIAL_COUPONS, INITIAL_SETTINGS } from '../utils/seedData';
+import { productsAPI, ordersAPI, reviewsAPI, settingsAPI } from '../lib/api';
+import { Product, Order, Review, StoreSettings } from '../types';
+import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from '../utils/seedData';
 
 interface StoreContextType {
   products: Product[];
   orders: Order[];
   reviews: Review[];
-  coupons: Coupon[];
   settings: StoreSettings;
   wishlist: string[];
   loading: boolean;
@@ -31,9 +30,6 @@ interface StoreContextType {
   approveReview: (reviewId: string) => Promise<void>;
   deleteReview: (reviewId: string) => Promise<void>;
   moderateReview: (reviewId: string, status: 'Approved' | 'Rejected') => Promise<void>;
-  addCoupon: (coupon: Omit<Coupon, 'id' | 'createdAt'>) => Promise<void>;
-  saveCoupon: (coupon: Partial<Coupon>) => Promise<void>;
-  deleteCoupon: (id: string) => Promise<void>;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
 }
 
@@ -68,15 +64,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
-    }
-  });
-
-  const [coupons, setCoupons] = useState<Coupon[]>(() => {
-    try {
-      const saved = localStorage.getItem('oud_elixir_coupons');
-      return saved ? JSON.parse(saved) : INITIAL_COUPONS;
-    } catch {
-      return INITIAL_COUPONS;
     }
   });
 
@@ -136,7 +123,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { localStorage.setItem('oud_elixir_products', JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem('oud_elixir_orders', JSON.stringify(orders)); }, [orders]);
   useEffect(() => { localStorage.setItem('oud_elixir_reviews', JSON.stringify(reviews)); }, [reviews]);
-  useEffect(() => { localStorage.setItem('oud_elixir_coupons', JSON.stringify(coupons)); }, [coupons]);
   useEffect(() => { localStorage.setItem('oud_elixir_settings', JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem('oud_elixir_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
 
@@ -202,17 +188,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await approveReview(reviewId);
     } else {
       await deleteReview(reviewId);
-    }
-  };
-
-  const saveCoupon = async (couponData: Partial<Coupon>) => {
-    if (couponData.id) {
-      setCoupons((prev) => prev.map((c) => (c.id === couponData.id ? ({ ...c, ...couponData } as Coupon) : c)));
-      try {
-        await couponsAPI.update(couponData.id, couponData);
-      } catch (e) {}
-    } else {
-      await addCoupon(couponData as Omit<Coupon, 'id' | 'createdAt'>);
     }
   };
 
@@ -309,28 +284,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {}
   };
 
-  // Coupons CRUD
-  const addCoupon = async (couponData: Omit<Coupon, 'id' | 'createdAt'>) => {
-    try {
-      const created = await couponsAPI.create(couponData);
-      setCoupons((prev) => [created, ...prev]);
-    } catch (e) {
-      const newCoupon: Coupon = {
-        ...couponData,
-        id: 'coup-' + Date.now(),
-        createdAt: new Date().toISOString(),
-      };
-      setCoupons((prev) => [newCoupon, ...prev]);
-    }
-  };
-
-  const deleteCoupon = async (id: string) => {
-    setCoupons((prev) => prev.filter((c) => c.id !== id));
-    try {
-      await couponsAPI.delete(id);
-    } catch (e) {}
-  };
-
   // Settings
   const updateSettings = async (newSettings: Partial<StoreSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
@@ -342,12 +295,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <StoreContext.Provider
       value={{
-        products, orders, reviews, coupons, settings, wishlist, loading,
+        products, orders, reviews, settings, wishlist, loading,
         toggleWishlist, isInWishlist,
         addProduct, updateProduct, deleteProduct, saveProduct, resetDemoProducts,
         createOrder, updateOrderStatus, getOrderById,
         addReview, approveReview, deleteReview, moderateReview,
-        addCoupon, saveCoupon, deleteCoupon,
         updateSettings,
       }}
     >

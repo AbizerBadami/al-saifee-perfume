@@ -49,7 +49,7 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className={styles.colTitle}>The Private Club</h4>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Subscribe for private releases of rare wild agarwood harvests and receive 10% off your first acquisition.
+            Subscribe for private early access to rare wild agarwood harvests and limited edition collections.
           </p>
           <form className={styles.newsForm} onSubmit={handleSubscribe}>
             <div className={styles.inputGroup}>
@@ -67,7 +67,7 @@ export const Footer: React.FC = () => {
             </div>
             {subscribed && (
               <span style={{ fontSize: '0.75rem', color: 'var(--gold-primary)' }}>
-                Welcome to the inner circle. Code <strong>WELCOME10</strong> unlocked!
+                Welcome to the inner circle! You'll receive early access to new releases.
               </span>
             )}
           </form>

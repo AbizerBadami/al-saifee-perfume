@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
-import { Product, Coupon, Order } from '../types';
+import { Product, Order } from '../types';
 import styles from './AdminDashboard.module.css';
 
 const SAMPLE_PHOTOS = [
@@ -35,21 +35,29 @@ export const AdminDashboard: React.FC = () => {
   const {
     products,
     orders,
-    coupons,
     reviews,
     settings,
     saveProduct,
     deleteProduct,
     updateOrderStatus,
-    saveCoupon,
-    deleteCoupon,
     moderateReview,
     updateSettings,
   } = useStore();
 
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'coupons' | 'reviews' | 'settings'>('orders');
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const pendingOrdersCount = orders.filter((o) => o.status === 'Processing').length;
+
+  const handleProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingProduct.title) {
+      saveProduct(editingProduct as Product);
+      setProductModalOpen(false);
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'reviews' | 'settings'>('orders');
 
   // Product Modal State
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -111,58 +119,13 @@ export const AdminDashboard: React.FC = () => {
   // Shipping Details Modal State
   const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
 
-  // Coupon Modal State
-  const [couponModalOpen, setCouponModalOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<Partial<Coupon>>({
-    code: 'NEWCODE15',
-    discountType: 'percent',
-    discountValue: 15,
-    minOrderAmount: 50,
-    active: true,
-  });
-
-  if (!isAdmin) {
-    return (
-      <div className={styles.page} style={{ textAlign: 'center', paddingTop: '4rem' }}>
-        <h2>Access Restricted</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Please log in with administrator rights to access the panel.</p>
-        <button
-          onClick={() => navigate('/admin/login')}
-          style={{ background: 'var(--gold-gradient)', color: '#000', padding: '0.75rem 1.5rem', marginTop: '1rem', borderRadius: '4px', fontWeight: 700 }}
-        >
-          Go to Admin Login
-        </button>
-      </div>
-    );
-  }
-
-  // Calculate High-level Dashboard Statistics
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const pendingOrdersCount = orders.filter((o) => o.status === 'Processing').length;
-
-  const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingProduct.title && editingProduct.price) {
-      await saveProduct(editingProduct as Product);
-      setProductModalOpen(false);
-    }
-  };
-
-  const handleCouponSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingCoupon.code && editingCoupon.discountValue) {
-      await saveCoupon(editingCoupon as Coupon);
-      setCouponModalOpen(false);
-    }
-  };
-
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
         <div>
           <h1 className={styles.title}>Atelier Control Portal</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            Manage Al-Saifee Perfumes inventory, client acquisitions, coupons & reviews
+            Manage Al-Saifee Perfumes inventory, client acquisitions & reviews
           </p>
         </div>
 
@@ -205,9 +168,6 @@ export const AdminDashboard: React.FC = () => {
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.activeTab : ''}`} onClick={() => setActiveTab('products')}>
           Catalog Products ({products.length})
-        </button>
-        <button className={`${styles.tabBtn} ${activeTab === 'coupons' ? styles.activeTab : ''}`} onClick={() => setActiveTab('coupons')}>
-          Promotions & Coupons ({coupons.length})
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'reviews' ? styles.activeTab : ''}`} onClick={() => setActiveTab('reviews')}>
           Reviews Moderation ({reviews.length})
@@ -334,53 +294,6 @@ export const AdminDashboard: React.FC = () => {
                         onClick={() => deleteProduct(p.id)}
                       >
                         <FiTrash2 />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Coupons Tab */}
-      {activeTab === 'coupons' && (
-        <div className={styles.contentCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3>Promotional Coupons</h3>
-            <button
-              onClick={() => {
-                setEditingCoupon({ code: 'SAVE10', discountType: 'percent', discountValue: 10, minOrderAmount: 0, active: true });
-                setCouponModalOpen(true);
-              }}
-              style={{ background: 'var(--gold-gradient)', color: '#000', fontWeight: 700, padding: '0.5rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <FiPlus /> New Coupon
-            </button>
-          </div>
-
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.code}</strong></td>
-                    <td>{c.discountType === 'percent' ? 'Percentage' : 'Fixed Amount'}</td>
-                    <td>{c.discountType === 'percent' ? `${c.discountValue}%` : `₹${c.discountValue.toLocaleString('en-IN')}`}</td>
-                    <td>{c.active ? 'Active' : 'Disabled'}</td>
-                    <td>
-                      <button className={styles.actionBtn} style={{ borderColor: '#ef4444', color: '#ef4444' }} onClick={() => deleteCoupon(c.id)}>
-                        <FiTrash2 /> Delete
                       </button>
                     </td>
                   </tr>
@@ -773,79 +686,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Coupon Modal */}
-      {couponModalOpen && (
-        <div className={styles.modalOverlay} onClick={() => setCouponModalOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3>Manage Promo Coupon</h3>
-              <button onClick={() => setCouponModalOpen(false)}><FiX /></button>
-            </div>
-
-            <form onSubmit={handleCouponSubmit} className={styles.formGrid}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Promo Code</label>
-                <input
-                  type="text"
-                  value={editingCoupon.code || ''}
-                  onChange={(e) => setEditingCoupon({ ...editingCoupon, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. ROYAL20"
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Discount Type</label>
-                <select
-                  value={editingCoupon.discountType || 'percent'}
-                  onChange={(e) => setEditingCoupon({ ...editingCoupon, discountType: e.target.value as 'percent' | 'fixed' })}
-                >
-                  <option value="percent">Percentage (%)</option>
-                  <option value="fixed">Fixed Amount (₹)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {editingCoupon.discountType === 'fixed' ? 'Discount Value (₹)' : 'Discount Value (%)'}
-                </label>
-                <input
-                  type="number"
-                  value={editingCoupon.discountValue || 10}
-                  onChange={(e) => setEditingCoupon({ ...editingCoupon, discountValue: Number(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Min. Order Amount (₹)</label>
-                <input
-                  type="number"
-                  value={editingCoupon.minOrderAmount || 0}
-                  onChange={(e) => setEditingCoupon({ ...editingCoupon, minOrderAmount: Number(e.target.value) })}
-                />
-              </div>
-
-              <div className={styles.formGridFull} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  id="couponActive"
-                  checked={editingCoupon.active ?? true}
-                  onChange={(e) => setEditingCoupon({ ...editingCoupon, active: e.target.checked })}
-                />
-                <label htmlFor="couponActive" style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
-                  Enable / Activate Coupon
-                </label>
-              </div>
-
-              <button type="submit" className={styles.submitBtn}>
-                Save Coupon Code
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Shipping Address Modal */}
       {shippingModalOrder && (
         <div className={styles.modalOverlay} onClick={() => setShippingModalOrder(null)}>
@@ -918,3 +758,4 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+

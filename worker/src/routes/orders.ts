@@ -63,7 +63,7 @@ orders.get('/:id', authGuard, async (c) => {
 });
 
 // POST /api/orders — Create a new order (public — called after payment verification)
-orders.post('/', async (c) => {
+orders.post('/', authGuard, async (c) => {
   const body = await c.req.json();
   const id = `ord-${Date.now()}`;
   const orderNumber = `ELE-${Math.floor(100000 + Math.random() * 900000)}`;

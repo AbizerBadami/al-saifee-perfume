@@ -53,6 +53,7 @@ export const ProductDetail: React.FC = () => {
               alt={product.title}
               className={styles.mainImage}
               referrerPolicy="no-referrer"
+              loading="lazy"
             />
           </div>
 
@@ -75,6 +76,14 @@ export const ProductDetail: React.FC = () => {
         <div className={styles.infoCol}>
           <div>
             <div className={styles.categoryTag}>{product.category} • {product.fragranceFamily} Family</div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '4px', padding: '0.3rem 0.6rem', fontSize: '0.7rem',
+              color: '#10b981', fontWeight: 600, marginTop: '0.5rem'
+            }}>
+              ✓ 100% Non-Alcoholic • Halal Compliant • Pure Perfume Oil
+            </div>
             <h1 className={styles.title}>{product.title}</h1>
             <div className={styles.subtitle}>{product.subtitle}</div>
           </div>
@@ -118,7 +127,7 @@ export const ProductDetail: React.FC = () => {
             <div className={styles.qtyBox}>
               <button className={styles.qtyBtn} onClick={() => setQuantity((q) => Math.max(1, q - 1))}>-</button>
               <span className={styles.qtyVal}>{quantity}</span>
-              <button className={styles.qtyBtn} onClick={() => setQuantity((q) => q + 1)}>+</button>
+              <button className={styles.qtyBtn} onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}>+</button>
             </div>
 
             <button className={styles.addBtn} onClick={handleAddToCart}>
@@ -133,6 +142,18 @@ export const ProductDetail: React.FC = () => {
               <span style={{ color: isWished ? '#ef4444' : 'inherit', display: 'inline-block' }}><FiHeart /></span>
             </button>
           </div>
+
+          {/* Stock Indicator */}
+          {product.stock <= 10 && product.stock > 0 && (
+            <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', fontWeight: 600 }}>
+              Only {product.stock} left in stock — order soon
+            </div>
+          )}
+          {product.stock === 0 && (
+            <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', fontWeight: 600 }}>
+              Currently out of stock
+            </div>
+          )}
 
           {/* Notes Pyramid */}
           <FragranceNotes

@@ -20,6 +20,12 @@ auth.post('/register', async (c) => {
     return c.json({ error: 'Password must be at least 6 characters' }, 400);
   }
 
+  // SECURITY: Only allow registration when no admins exist (first-time setup)
+  const adminCount = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM admins').first<{ cnt: number }>();
+  if (adminCount && adminCount.cnt > 0) {
+    return c.json({ error: 'Admin registration is closed. Contact the existing administrator.' }, 403);
+  }
+
   // Check if this email is already registered
   const existing = await c.env.DB.prepare('SELECT id FROM admins WHERE email = ?').bind(email).first();
   if (existing) {

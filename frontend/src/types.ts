@@ -55,7 +55,6 @@ export interface Order {
   shippingAddress: ShippingAddress;
   items: CartItem[];
   subtotal: number;
-  discount: number;
   tax: number;
   shippingFee: number;
   total: number;
@@ -77,15 +76,7 @@ export interface Review {
   createdAt: string;
 }
 
-export interface Coupon {
-  id: string;
-  code: string;
-  discountType: 'percent' | 'fixed';
-  discountValue: number;
-  minOrderAmount?: number;
-  active: boolean;
-  createdAt: string;
-}
+
 
 export interface StoreSettings {
   storeName: string;
