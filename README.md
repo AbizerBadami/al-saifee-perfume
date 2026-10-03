@@ -1,80 +1,52 @@
-# Oud & Elixir — Luxury Perfumes & Pure Attars E-Commerce House
+# Al-Saifee Perfumes - E-Commerce Platform
 
-A high-end, responsive luxury fragrance e-commerce web application built with **React (Vite)**, **Firebase (Firestore & Authentication)**, **Stripe**, and **Cloud Functions**.
+Al-Saifee Perfumes is a custom-built, decoupled e-commerce platform designed specifically for artisanal fragrances. The application is built entirely on the Cloudflare edge network, providing minimal latency, high availability, and serverless scalability.
 
----
+## Architecture Overview
 
-## 🌟 Key Features
+The system follows a strict decoupled architecture separated into a static frontend and a serverless backend.
 
-### 🛍️ Customer Experience
-- **Luxury Hero & Showcase**: Elegant obsidian and champagne gold aesthetic featuring static high-resolution imagery, brand heritage, and curated fragrance spotlights.
-- **Interactive Shop**: Advanced sidebar filtering by Category (*Perfumes, Pure Attars, Artisanal Extracts, Oud Specials*), Fragrance Family (*Woody, Amber, Floral, Oriental, Fresh, Spicy*), Price slider, Sorting (*Price Low/High, Rating, Newest*), Search bar, and Pagination.
-- **Product Detail**: Multi-view bottle gallery, interactive Fragrance Notes Pyramid (*Top, Heart, Base notes with visual badges*), Size selection (12ml pure attar, 50ml, 100ml Extrait de Parfum), Longevity & Projection meters, Wishlist toggle (persisted), and CRUD Reviews with star ratings.
-- **Cart Slide-in Drawer**: Quantity adjustments (+/-), item removal, coupon code validation (`WELCOME10` for 10% off), tax calculation (10%), free shipping calculator ($50 threshold), and checkout trigger.
-- **Guest Checkout**: Guest-friendly checkout flow collecting customer name, email, and shipping address before redirecting to Stripe Hosted Checkout or running a seamless luxury demo process.
-- **Order Confirmation & PDF Invoice**: Generates a PDF invoice with itemized breakdown, tax, shipping, and order tracking link.
-- **Real-Time Order Tracking**: Lookup orders by Order Number (e.g. `ELE-8921`) and Customer Email with a status progress bar (*Processing -> Shipped -> Delivered*).
+*   **Frontend (Cloudflare Pages):** Built with React 19, TypeScript, and Vite. State management is handled natively via React Context (StoreContext for remote data syncing, CartContext for local cart state). The frontend is compiled to static assets and served globally via Cloudflare Pages.
+*   **Backend (Cloudflare Workers):** The API is built using Hono, a lightweight, ultrafast web framework optimized for edge runtimes. It handles routing, authorization, and checkout orchestration.
+*   **Database (Cloudflare D1):** A serverless SQLite database native to Cloudflare. The schema is fully normalized, separating products, orders, order items, reviews, and store settings, utilizing foreign key constraints and cascading deletes to maintain referential integrity.
+*   **Payments (Razorpay):** Integrated directly via the Razorpay REST API to avoid heavy Node.js SDK dependencies on the edge.
 
-### 🔐 Admin Dashboard (`/admin`)
-- **Dashboard Overview**: Metrics for Total Revenue, Orders, Products, and Pending Shipments.
-- **Orders Management**: Search orders, view line items and customer addresses, and update order status.
-- **Product Management (CRUD)**: Create, edit, and delete products with top/mid/base note tags, price, stock, category, and images.
-- **Coupon Management**: Create percentage or fixed-value promo codes with minimum order limits.
-- **Review Moderation**: Approve or delete customer product reviews.
-- **Store Settings**: Configure tax rates, free shipping thresholds, store currency, and banner announcements.
+## System Design & Technical Implementation
 
----
+### Security-First Payment Flow
+To prevent client-side price manipulation, the frontend cart never dictates the final order amount. During the checkout process:
+1. The frontend submits an array of product IDs and quantities.
+2. The Worker queries the D1 database to determine the authoritative price for each item.
+3. Subtotals, dynamic tax rates, and shipping thresholds are recalculated server-side.
+4. The Worker generates the Razorpay order and returns the `keyId` and `amount` to the client for the payment overlay.
+5. Upon completion, the Razorpay HMAC-SHA256 signature is verified server-side using the native Web Crypto API before the order is committed.
 
-## 📁 Repository Directory Structure
+### Concurrency and Inventory Management
+Inventory race conditions are mitigated by utilizing atomic D1 batch transactions. When a payment is verified, the order insertion, order items insertion, and product stock decrements are queued in a single `db.batch()` call. A strict `WHERE stock >= quantity` clause ensures that concurrent checkouts cannot oversell limited inventory.
 
-```
-├── public/                 # Public assets and favicon
-├── src/
-│   ├── components/         # Navbar, Hero, ProductCard, CartDrawer, FragranceNotes...
-│   ├── pages/              # Home, Shop, ProductDetail, Checkout, Success, OrderTracking, Admin...
-│   ├── context/            # CartContext, AuthContext, StoreContext
-│   ├── utils/              # firebase.js, seedData.js, pdfGenerator.js
-│   └── styles/             # Modular CSS stylesheets (Gold & Black Luxury theme)
-├── functions/              # Firebase Cloud Functions (index.js, package.json)
-├── firestore.rules         # Security Rules for Firestore
-├── firebase.json           # Firebase Deployment Config
-├── .env.example            # Environment variables template
-├── package.json            # Vite React dependencies
-└── README.md               # Documentation
-```
+### Edge Authentication
+Administrative access is secured via JSON Web Tokens (JWT). Due to the constraints of the V8 isolate environment in Cloudflare Workers, authentication is implemented entirely via the standard Web Crypto API. Passwords are hashed using PBKDF2 (100,000 iterations), and JWTs are signed and verified using HMAC-SHA256. Registration is locked after the initial admin account is provisioned to prevent privilege escalation.
 
----
+## Local Development Setup
 
-## 🚀 Setup & Installation
+### Prerequisites
+*   Node.js (v18+)
+*   Cloudflare Wrangler CLI (`npm install -g wrangler`)
 
-### 1. Clone & Install Dependencies
-```bash
-npm install
-cd functions && npm install && cd ..
-```
+### Backend Setup (Worker)
+1. Navigate to the `worker/` directory and install dependencies.
+2. Instantiate a local D1 database: `npx wrangler d1 execute al-saifee-db --local --file=./src/db/schema.sql`
+3. Seed the initial data: `npx wrangler d1 execute al-saifee-db --local --file=./src/db/seed.sql`
+4. Rename `.env.example` to `.env` and add your development Razorpay keys. Do not commit real production secrets to version control.
+5. Start the local worker: `npx wrangler dev`
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env` and fill in your Firebase & Stripe API keys:
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_bucket.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_STRIPE_PUBLIC_KEY=your_stripe_key
-```
+### Frontend Setup (Pages)
+1. Navigate to the `frontend/` directory and install dependencies.
+2. Ensure the backend is running locally on port 8787. The Vite configuration will automatically proxy `/api` requests to the local worker.
+3. Start the development server: `npm run dev`
 
-### 3. Run Development Server
-```bash
-npm run dev
-```
-The application will start on `http://localhost:3000`.
+## Deployment
 
----
-
-3. Or use the built-in First Admin Setup tool on the `/admin/login` page!
-
----
-
-© 2026 Oud & Elixir Fragrance House. All rights reserved.
+Deployments are managed via Wrangler. 
+*   **Backend:** Authenticate via `wrangler login`, provision a production D1 database, set the `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `JWT_SECRET` via `wrangler secret put`, and run `wrangler deploy`.
+*   **Frontend:** Update the `API_BASE` in the frontend API client to point to your live Worker URL, run `npm run build`, and deploy the `dist` folder via `wrangler pages deploy dist`.
