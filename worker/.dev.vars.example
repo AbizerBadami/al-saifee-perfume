@@ -1,0 +1,10 @@
+# Cloudflare Worker Local Environment Secrets
+# Copy this file to .dev.vars in the worker/ directory for local development:
+#   cp .dev.vars.example .dev.vars
+
+# Razorpay API Credentials (from https://dashboard.razorpay.com/app/keys)
+RAZORPAY_KEY_ID="rzp_test_your_key_id_here"
+RAZORPAY_KEY_SECRET="your_razorpay_key_secret_here"
+
+# JWT Secret for admin authentication tokens
+JWT_SECRET="your_super_secret_jwt_key_here"
