@@ -1,6 +1,10 @@
 // ============================================================
 // Al-Saifee Perfumes — Cloudflare Worker Entry Point
-// Hono app that mounts all route modules and CORS middleware
+// Hardened with:
+//   - Strict CORS origin filtering (denies arbitrary origins)
+//   - OWASP Security Headers & Razorpay-compliant CSP
+//   - Sanitized global error handler returning generic message + requestId
+//   - Mounted route modules with full RBAC authentication
 // ============================================================
 
 import { Hono } from 'hono';
@@ -14,25 +18,49 @@ import reviews from './routes/reviews';
 import settings from './routes/settings';
 import auth from './routes/auth';
 import checkout from './routes/checkout';
+import tasks from './routes/tasks';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-// ---------- Middleware ----------
+// ---------- Global Middleware ----------
 
-// Request logging (shows in wrangler dev / Worker logs)
+// Request logging (Worker logs / wrangler tail)
 app.use('*', logger());
 
-// CORS — allow the frontend origin
+// OWASP Security Headers & CSP
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'SAMEORIGIN');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  c.header('X-Robots-Tag', 'noindex, nofollow');
+  c.header(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://api.razorpay.com; " +
+    "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.workers.dev; " +
+    "frame-src https://api.razorpay.com https://checkout.razorpay.com; " +
+    "img-src 'self' data: blob: https://images.unsplash.com https://*.razorpay.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "object-src 'none'; " +
+    "base-uri 'self';"
+  );
+});
+
+// Strict CORS — allow only explicit frontend origin, reject unknown origins
 app.use(
   '/api/*',
   cors({
     origin: (origin, c) => {
-      const allowed = [
-        c.env.FRONTEND_URL || 'http://localhost:3000',
-        'http://localhost:3000',
-        'http://localhost:5173',
-      ];
-      return allowed.includes(origin) ? origin : allowed[0];
+      if (!origin) return '';
+      const allowedOrigin = c.env.FRONTEND_URL?.replace(/\/+$/, '');
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+      if (allowedOrigin && normalizedOrigin === allowedOrigin) {
+        return origin;
+      }
+      return '';
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
@@ -54,6 +82,7 @@ app.get('/', (c) => {
       settings: '/api/settings',
       auth: '/api/auth',
       checkout: '/api/checkout',
+      tasks: '/api/tasks',
     },
   });
 });
@@ -66,6 +95,7 @@ app.route('/api/reviews', reviews);
 app.route('/api/settings', settings);
 app.route('/api/auth', auth);
 app.route('/api/checkout', checkout);
+app.route('/api/tasks', tasks);
 
 // ---------- 404 fallback ----------
 
@@ -73,12 +103,19 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found', path: c.req.path }, 404);
 });
 
-// ---------- Global error handler ----------
+// ---------- Global error handler (Sanitized) ----------
 
 app.onError((err, c) => {
-  console.error('Unhandled error:', err);
-  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+  const requestId = c.req.header('cf-ray') || crypto.randomUUID();
+  console.error(`[Unhandled error | Request ID ${requestId}]:`, err);
+  return c.json(
+    {
+      error: 'Internal Server Error',
+      requestId,
+      message: 'An error occurred while processing your request. Please quote the requestId to support.',
+    },
+    500
+  );
 });
 
-// Native Worker fetch export
 export default app;

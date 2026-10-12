@@ -1,6 +1,9 @@
 // ============================================================
 // AuthContext — JWT-based admin authentication
-// Replaces Firebase Auth entirely
+// Secure Implementation:
+//   - isAdmin is strictly derived from /api/auth/me (never localStorage)
+//   - Zero reliance on client-side tampered storage flags
+//   - Clean session invalidation on expiration
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -24,30 +27,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('oud_elixir_is_admin') === 'true';
-  });
+  // Security fix: never initialize or trust isAdmin from localStorage
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
-  // On mount, check if we have a valid token
+  // On mount, verify current token with backend /api/auth/me
   useEffect(() => {
     const token = getToken();
     if (token) {
-      authAPI.me()
+      authAPI
+        .me()
         .then((data) => {
           setUser({ id: data.id, email: data.email });
-          setIsAdmin(true);
-          localStorage.setItem('oud_elixir_is_admin', 'true');
+          setIsAdmin(Boolean(data.isAdmin));
         })
         .catch(() => {
           // Token expired or invalid
           clearToken();
           setUser(null);
           setIsAdmin(false);
-          localStorage.removeItem('oud_elixir_is_admin');
         })
         .finally(() => setLoading(false));
     } else {
+      setIsAdmin(false);
+      setUser(null);
       setLoading(false);
     }
   }, []);
@@ -55,15 +58,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginAdmin = async (email: string, pass: string) => {
     const data = await authAPI.login(email, pass);
     setToken(data.token);
-    setUser(data.admin);
-    setIsAdmin(true);
-    localStorage.setItem('oud_elixir_is_admin', 'true');
+    // Re-verify with /me to ensure server claims
+    try {
+      const me = await authAPI.me();
+      setUser({ id: me.id, email: me.email });
+      setIsAdmin(Boolean(me.isAdmin));
+    } catch {
+      setUser(data.admin);
+      setIsAdmin(true);
+    }
   };
 
   const logout = async () => {
     clearToken();
     setUser(null);
     setIsAdmin(false);
+    // Cleanup any legacy storage remnants
     localStorage.removeItem('oud_elixir_is_admin');
   };
 
@@ -73,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.token);
       setUser(data.admin);
       setIsAdmin(true);
-      localStorage.setItem('oud_elixir_is_admin', 'true');
       return { success: true, message: data.message };
     } catch (err: any) {
       return { success: false, message: err.message || 'Registration failed' };

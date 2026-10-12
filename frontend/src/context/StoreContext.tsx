@@ -49,14 +49,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem('oud_elixir_orders');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Security: Do not persist orders in unencrypted localStorage
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
@@ -121,7 +115,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Persist to localStorage on state changes
   useEffect(() => { localStorage.setItem('oud_elixir_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('oud_elixir_orders', JSON.stringify(orders)); }, [orders]);
   useEffect(() => { localStorage.setItem('oud_elixir_reviews', JSON.stringify(reviews)); }, [reviews]);
   useEffect(() => { localStorage.setItem('oud_elixir_settings', JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem('oud_elixir_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
@@ -197,7 +190,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const created = await ordersAPI.create(orderData);
       setOrders((prev) => {
         const updated = [created, ...prev];
-        localStorage.setItem('oud_elixir_orders', JSON.stringify(updated));
         window.dispatchEvent(new Event('order_updated'));
         return updated;
       });
@@ -211,7 +203,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       setOrders((prev) => {
         const updated = [newOrder, ...prev];
-        localStorage.setItem('oud_elixir_orders', JSON.stringify(updated));
         window.dispatchEvent(new Event('order_updated'));
         return updated;
       });
@@ -222,7 +213,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateOrderStatus = async (orderId: string, status: Order['status'], trackingNumber?: string) => {
     setOrders((prev) => {
       const updated = prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o));
-      localStorage.setItem('oud_elixir_orders', JSON.stringify(updated));
       window.dispatchEvent(new Event('order_updated'));
       return updated;
     });
