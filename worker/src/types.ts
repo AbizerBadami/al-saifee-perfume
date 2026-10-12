@@ -13,6 +13,7 @@ export type Bindings = {
   JWT_EXPIRES_IN: string;
   ADMIN_SETUP_TOKEN?: string;
   RATE_LIMITER?: RateLimit;
+  RAZORPAY_WEBHOOK_SECRET?: string;
 };
 
 /** Hono context variables set by auth middleware */
@@ -200,7 +201,7 @@ export function toPublicOrderJSON(row: OrderRow, items: OrderItemRow[]) {
       city: addr.city || '',
       state: addr.state || '',
       country: addr.country || '',
-      pincode: addr.pincode ? `${addr.pincode.slice(0, 2)}***` : '',
+      pincode: (addr.pincode || addr.postalCode) ? `${String(addr.pincode || addr.postalCode).slice(0, 2)}***` : '',
     },
     items: items.map((i) => ({
       product: { id: i.product_id, title: i.product_title },

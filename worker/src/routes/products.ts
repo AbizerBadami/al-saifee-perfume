@@ -1,16 +1,49 @@
 // ============================================================
 // Products API Routes
+// Hardened with:
+//   - Zod schema validation on creation and updates
+//   - Rate limiting on public catalog queries
+//   - RBAC authGuard protection on administrative CRUD
 // ============================================================
 
 import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import type { Bindings, ProductRow } from '../types';
 import { toProductJSON } from '../types';
 import { authGuard } from '../middleware/auth';
+import { rateLimiter } from '../middleware/rateLimiter';
 
 const products = new Hono<{ Bindings: Bindings }>();
 
-// GET /api/products — List all products (public)
-products.get('/', async (c) => {
+// ---------- Validation Schemas ----------
+
+const productSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(200),
+  subtitle: z.string().trim().max(200).default(''),
+  category: z.enum(['Perfumes', 'Pure Attars', 'Artisanal Extracts', 'Oud Specials']),
+  fragranceFamily: z.enum(['Woody', 'Amber', 'Floral', 'Oriental', 'Fresh', 'Spicy']),
+  price: z.number().positive('Price must be greater than 0'),
+  salePrice: z.number().positive().nullable().optional(),
+  stock: z.number().int().nonnegative('Stock cannot be negative').default(0),
+  description: z.string().trim().max(4000).default(''),
+  topNotes: z.array(z.string()).default([]),
+  middleNotes: z.array(z.string()).default([]),
+  baseNotes: z.array(z.string()).default([]),
+  longevity: z.string().trim().max(100).default(''),
+  projection: z.string().trim().max(100).default(''),
+  bottleSizes: z.array(z.string()).default([]),
+  images: z.array(z.string()).default([]),
+  isFeatured: z.boolean().default(false),
+  isBestSeller: z.boolean().default(false),
+});
+
+const productUpdateSchema = productSchema.partial();
+
+// ---------- Route Handlers ----------
+
+// GET /api/products — List all products (public, cached/rate-limited)
+products.get('/', rateLimiter(60, 60), async (c) => {
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM products ORDER BY created_at DESC'
   ).all<ProductRow>();
@@ -19,7 +52,7 @@ products.get('/', async (c) => {
 });
 
 // GET /api/products/:id — Single product (public)
-products.get('/:id', async (c) => {
+products.get('/:id', rateLimiter(60, 60), async (c) => {
   const id = c.req.param('id');
   const row = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first<ProductRow>();
 
@@ -27,10 +60,10 @@ products.get('/:id', async (c) => {
   return c.json(toProductJSON(row));
 });
 
-// POST /api/products — Create product (admin only)
-products.post('/', authGuard, async (c) => {
-  const body = await c.req.json();
-  const id = `prod-${Date.now()}`;
+// POST /api/products — Create product (admin only, validated)
+products.post('/', authGuard, zValidator('json', productSchema), async (c) => {
+  const body = c.req.valid('json');
+  const id = `prod-${crypto.randomUUID().slice(0, 12)}`;
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(`
@@ -51,10 +84,10 @@ products.post('/', authGuard, async (c) => {
   return c.json(toProductJSON(created!), 201);
 });
 
-// PUT /api/products/:id — Update product (admin only)
-products.put('/:id', authGuard, async (c) => {
+// PUT /api/products/:id — Update product (admin only, validated)
+products.put('/:id', authGuard, zValidator('json', productUpdateSchema), async (c) => {
   const id = c.req.param('id');
-  const body = await c.req.json();
+  const body = c.req.valid('json');
 
   const existing = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first<ProductRow>();
   if (!existing) return c.json({ error: 'Product not found' }, 404);

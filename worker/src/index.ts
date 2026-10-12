@@ -60,6 +60,11 @@ app.use(
       if (allowedOrigin && normalizedOrigin === allowedOrigin) {
         return origin;
       }
+      // Allow local development origins only when running in dev/local mode
+      const isDev = !c.env.FRONTEND_URL || c.env.FRONTEND_URL.includes('localhost');
+      if (isDev && (normalizedOrigin === 'http://localhost:3000' || normalizedOrigin === 'http://localhost:5173')) {
+        return origin;
+      }
       return '';
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

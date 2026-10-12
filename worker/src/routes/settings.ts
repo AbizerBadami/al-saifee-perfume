@@ -12,6 +12,7 @@ import { zValidator } from '@hono/zod-validator';
 import type { Bindings, Variables, StoreSettingsRow } from '../types';
 import { toSettingsJSON } from '../types';
 import { authGuard } from '../middleware/auth';
+import { rateLimiter } from '../middleware/rateLimiter';
 
 const settings = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -28,8 +29,8 @@ const settingsUpdateSchema = z.object({
 
 // ---------- Route Handlers ----------
 
-// GET /api/settings — Retrieve global store settings (public)
-settings.get('/', async (c) => {
+// GET /api/settings — Retrieve global store settings (public, throttled)
+settings.get('/', rateLimiter(30, 60), async (c) => {
   const row = await c.env.DB.prepare(
     'SELECT * FROM store_settings WHERE id = 1'
   ).first<StoreSettingsRow>();

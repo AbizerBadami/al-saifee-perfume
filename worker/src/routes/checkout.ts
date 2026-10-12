@@ -353,4 +353,46 @@ checkout.post('/verify', rateLimiter(15, 60), async (c) => {
   }
 });
 
+// POST /api/checkout/webhook — Razorpay Webhook endpoint
+checkout.post('/webhook', async (c) => {
+  const signature = c.req.header('x-razorpay-signature');
+  const bodyText = await c.req.text();
+
+  if (c.env.RAZORPAY_WEBHOOK_SECRET) {
+    if (!signature) {
+      return c.json({ error: 'Missing webhook signature' }, 400);
+    }
+    try {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(c.env.RAZORPAY_WEBHOOK_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['verify']
+      );
+      const sigBytes = new Uint8Array(32);
+      for (let i = 0; i < 32; i++) {
+        const byte = parseInt(signature.slice(i * 2, i * 2 + 2), 16);
+        if (isNaN(byte)) return c.json({ error: 'Malformed signature' }, 400);
+        sigBytes[i] = byte;
+      }
+      const valid = await crypto.subtle.verify('HMAC', key, sigBytes, enc.encode(bodyText));
+      if (!valid) {
+        return c.json({ error: 'Invalid webhook signature' }, 400);
+      }
+    } catch {
+      return c.json({ error: 'Signature verification error' }, 400);
+    }
+  }
+
+  try {
+    const payload = JSON.parse(bodyText);
+    console.log(`Razorpay Webhook Event: ${payload.event}`);
+    return c.json({ received: true, event: payload.event });
+  } catch {
+    return c.json({ error: 'Invalid JSON payload' }, 400);
+  }
+});
+
 export default checkout;

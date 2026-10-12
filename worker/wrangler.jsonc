@@ -19,6 +19,9 @@
 		"FRONTEND_URL": "https://al-saifee-frontend.al-saifee-worker.workers.dev",
 		"JWT_EXPIRES_IN": "86400"
 	},
+	"observability": {
+		"enabled": true
+	},
 	"ratelimits": [
 		{
 			"name": "RATE_LIMITER",
