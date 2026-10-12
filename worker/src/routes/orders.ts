@@ -1,13 +1,56 @@
 // ============================================================
 // Orders API Routes
+// Hardened with:
+//   - Rate limiting on public order lookups to prevent enumeration
+//   - Redacted shipping address on public tracking responses
+//   - Cryptographically secure random order numbers
+//   - Zod validation for order creation and status updates
+//   - RBAC authGuard protection on administrative endpoints
 // ============================================================
 
 import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import type { Bindings, OrderRow, OrderItemRow } from '../types';
-import { toOrderJSON } from '../types';
+import { toOrderJSON, toPublicOrderJSON } from '../types';
 import { authGuard } from '../middleware/auth';
+import { rateLimiter } from '../middleware/rateLimiter';
 
 const orders = new Hono<{ Bindings: Bindings }>();
+
+// ---------- Validation Schemas ----------
+
+const orderStatusUpdateSchema = z.object({
+  status: z.enum(['Processing', 'Shipped', 'Delivered', 'Cancelled']).optional(),
+  trackingNumber: z.string().trim().max(100).optional(),
+  paymentStatus: z.enum(['Paid', 'Pending', 'Failed']).optional(),
+});
+
+const orderCreateSchema = z.object({
+  customerName: z.string().trim().min(1).max(100).default('Valued Guest'),
+  customerEmail: z.string().trim().email('Invalid customer email').max(100),
+  shippingAddress: z.record(z.string(), z.any()).default({}),
+  items: z.array(
+    z.object({
+      product: z.object({ id: z.string(), title: z.string().optional() }).optional(),
+      productId: z.string().optional(),
+      productTitle: z.string().optional(),
+      selectedSize: z.string().default(''),
+      quantity: z.number().int().positive().default(1),
+      price: z.number().nonnegative().default(0),
+    })
+  ).min(1, 'Order must contain at least one item'),
+  subtotal: z.number().nonnegative(),
+  tax: z.number().nonnegative().optional(),
+  shippingFee: z.number().nonnegative().optional(),
+  total: z.number().nonnegative(),
+  paymentStatus: z.enum(['Paid', 'Pending', 'Failed']).default('Paid'),
+  paymentMethod: z.string().trim().max(50).default('Razorpay'),
+  razorpayOrderId: z.string().max(100).optional().nullable(),
+  razorpayPaymentId: z.string().max(100).optional().nullable(),
+});
+
+// ---------- Route Handlers ----------
 
 // GET /api/orders — List all orders (admin only)
 orders.get('/', authGuard, async (c) => {
@@ -27,17 +70,17 @@ orders.get('/', authGuard, async (c) => {
   return c.json({ orders: ordersWithItems, total: ordersWithItems.length, status: 'success' });
 });
 
-// GET /api/orders/lookup — Lookup by order number + email (public, for order tracking)
-orders.get('/lookup', async (c) => {
-  const orderNumber = c.req.query('orderNumber');
-  const email = c.req.query('email');
+// GET /api/orders/lookup — Lookup by order number + email (public, throttled, sanitized PII)
+orders.get('/lookup', rateLimiter(10, 60), async (c) => {
+  const orderNumber = c.req.query('orderNumber')?.trim();
+  const email = c.req.query('email')?.trim();
 
   if (!orderNumber || !email) {
     return c.json({ error: 'Both orderNumber and email are required' }, 400);
   }
 
   const order = await c.env.DB.prepare(
-    'SELECT * FROM orders WHERE order_number = ? AND customer_email = ?'
+    'SELECT * FROM orders WHERE order_number = ? AND LOWER(customer_email) = LOWER(?)'
   ).bind(orderNumber, email).first<OrderRow>();
 
   if (!order) return c.json({ error: 'Order not found' }, 404);
@@ -46,7 +89,7 @@ orders.get('/lookup', async (c) => {
     'SELECT * FROM order_items WHERE order_id = ?'
   ).bind(order.id).all<OrderItemRow>();
 
-  return c.json(toOrderJSON(order, items));
+  return c.json(toPublicOrderJSON(order, items));
 });
 
 // GET /api/orders/:id — Single order (admin only)
@@ -62,19 +105,19 @@ orders.get('/:id', authGuard, async (c) => {
   return c.json(toOrderJSON(order, items));
 });
 
-// POST /api/orders — Create a new order (public — called after payment verification)
-orders.post('/', authGuard, async (c) => {
-  const body = await c.req.json();
-  const id = `ord-${Date.now()}`;
-  const orderNumber = `ELE-${Math.floor(100000 + Math.random() * 900000)}`;
+// POST /api/orders — Create a new order (admin only)
+orders.post('/', authGuard, zValidator('json', orderCreateSchema), async (c) => {
+  const body = c.req.valid('json');
+  const id = `ord-${crypto.randomUUID().slice(0, 12)}`;
+  const randomSuffix = crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000;
+  const orderNumber = `ASP-${randomSuffix}`;
   const now = new Date().toISOString();
 
-  const subtotal: number = body.subtotal ?? 0;
+  const subtotal: number = body.subtotal;
   const taxRate = 0.10;
-  const taxableAmount = subtotal;
-  const tax: number = body.tax ?? Math.round(taxableAmount * taxRate * 100) / 100;
+  const tax: number = body.tax ?? Math.round(subtotal * taxRate * 100) / 100;
   const shippingFee: number = body.shippingFee ?? 0;
-  const total: number = body.total ?? taxableAmount + tax + shippingFee;
+  const total: number = body.total ?? subtotal + tax + shippingFee;
 
   await c.env.DB.prepare(`
     INSERT INTO orders (id, order_number, customer_name, customer_email, shipping_address,
@@ -83,32 +126,32 @@ orders.post('/', authGuard, async (c) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Processing', ?, ?, ?, ?, ?)
   `).bind(
     id, orderNumber,
-    body.customerName || 'Valued Guest',
-    body.customerEmail || '',
-    JSON.stringify(body.shippingAddress || {}),
+    body.customerName,
+    body.customerEmail,
+    JSON.stringify(body.shippingAddress),
     subtotal, tax, shippingFee, total,
-    body.paymentStatus || 'Paid',
-    body.paymentMethod || 'Razorpay',
+    body.paymentStatus,
+    body.paymentMethod,
     body.razorpayOrderId || null,
     body.razorpayPaymentId || null,
     now
   ).run();
 
   // Insert order items
-  if (body.items && Array.isArray(body.items)) {
-    for (const item of body.items) {
-      await c.env.DB.prepare(`
-        INSERT INTO order_items (order_id, product_id, product_title, selected_size, quantity, price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(
-        id,
-        item.product?.id || item.productId || '',
-        item.product?.title || item.productTitle || '',
-        item.selectedSize || '',
-        item.quantity || 1,
-        item.price || 0
-      ).run();
-    }
+  for (const item of body.items) {
+    const prodId = item.product?.id || item.productId || '';
+    const prodTitle = item.product?.title || item.productTitle || '';
+    await c.env.DB.prepare(`
+      INSERT INTO order_items (order_id, product_id, product_title, selected_size, quantity, price)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      prodId,
+      prodTitle,
+      item.selectedSize || '',
+      item.quantity || 1,
+      item.price || 0
+    ).run();
   }
 
   const created = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first<OrderRow>();
@@ -120,9 +163,9 @@ orders.post('/', authGuard, async (c) => {
 });
 
 // PATCH /api/orders/:id/status — Update order status (admin only)
-orders.patch('/:id/status', authGuard, async (c) => {
+orders.patch('/:id/status', authGuard, zValidator('json', orderStatusUpdateSchema), async (c) => {
   const id = c.req.param('id');
-  const body = await c.req.json();
+  const body = c.req.valid('json');
 
   const existing = await c.env.DB.prepare('SELECT id FROM orders WHERE id = ?').bind(id).first();
   if (!existing) return c.json({ error: 'Order not found' }, 404);

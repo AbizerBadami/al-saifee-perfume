@@ -11,8 +11,12 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import type { Bindings, Variables, TaskRow } from '../types';
 import { toTaskJSON } from '../types';
+import { authGuard } from '../middleware/auth';
 
 const tasks = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+// All tasks operations require administrative authentication
+tasks.use('*', authGuard);
 
 // ---------- Zod Validation Schemas ----------
 
