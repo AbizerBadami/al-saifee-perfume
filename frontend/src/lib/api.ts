@@ -3,7 +3,7 @@
 // Replaces all direct Firebase SDK calls
 // ============================================================
 
-const API_BASE = '/api'; // Proxied to Worker in dev, same-origin in prod
+const API_BASE = import.meta.env.VITE_API_URL || 'https://al-saifee-api.al-saifee-worker.workers.dev/api';
 
 /** Get the stored JWT token */
 export function getToken(): string | null {
