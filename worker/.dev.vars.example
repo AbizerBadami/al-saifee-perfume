@@ -1,15 +1,3 @@
-<<<<<<< HEAD
-# Cloudflare Worker Local Environment Secrets
-# Copy this file to .dev.vars in the worker/ directory for local development:
-#   cp .dev.vars.example .dev.vars
-
-# Razorpay API Credentials (from https://dashboard.razorpay.com/app/keys)
-RAZORPAY_KEY_ID="rzp_test_your_key_id_here"
-RAZORPAY_KEY_SECRET="your_razorpay_key_secret_here"
-
-# JWT Secret for admin authentication tokens
-JWT_SECRET="your_super_secret_jwt_key_here"
-=======
 # Copy to .dev.vars for local worker dev:  cp .dev.vars.example .dev.vars
 # NEVER commit .dev.vars. NEVER reuse the example secret in production.
 # Generate a real secret:  openssl rand -base64 48
@@ -21,4 +9,3 @@ JWT_SECRET="dev-only-replace-me-with-openssl-rand-base64-48"
 # Razorpay test credentials (sandbox only)
 RAZORPAY_KEY_ID="rzp_test_REPLACE_ME"
 RAZORPAY_KEY_SECRET="REPLACE_ME_DO_NOT_COMMIT"
->>>>>>> 03fb960 (rebuild)

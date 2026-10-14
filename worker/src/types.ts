@@ -11,9 +11,6 @@ export type Bindings = {
   RAZORPAY_KEY_SECRET: string;
   FRONTEND_URL: string;
   JWT_EXPIRES_IN: string;
-  ADMIN_SETUP_TOKEN?: string;
-  RATE_LIMITER?: RateLimit;
-  RAZORPAY_WEBHOOK_SECRET?: string;
 };
 
 /** Hono context variables set by auth middleware */
@@ -78,22 +75,6 @@ export interface OrderItemRow {
   price: number;
 }
 
-export interface PendingOrderRow {
-  id: string; // razorpay_order_id
-  amount: number;
-  currency: string;
-  items_json: string;
-  subtotal: number;
-  tax: number;
-  shipping_fee: number;
-  total: number;
-  customer_name: string;
-  customer_email: string;
-  shipping_address: string;
-  status: string;
-  created_at: string;
-}
-
 export interface ReviewRow {
   id: string;
   product_id: string;
@@ -137,10 +118,6 @@ export interface CustomerRow {
 // ---------- API Response helpers ----------
 
 /** Transforms a ProductRow into the JSON shape the frontend expects */
-<<<<<<< HEAD
-function safeJsonParse(str: string, fallback: any = {}): any {
-  try { return JSON.parse(str); } catch { return fallback; }
-=======
 function safeJsonParseArray(str: unknown, fallback: string[] = []): string[] {
   if (Array.isArray(str)) return str.map(String);
   if (typeof str !== 'string') return fallback;
@@ -161,7 +138,6 @@ function safeJsonParseObject(str: unknown, fallback: Record<string, unknown> = {
   } catch {
     return fallback;
   }
->>>>>>> 03fb960 (rebuild)
 }
 
 export function toProductJSON(row: ProductRow) {
@@ -196,22 +172,6 @@ export function toReviewJSON(row: ReviewRow, includePrivate = false) {
     id: row.id,
     productId: row.product_id,
     userName: row.user_name,
-<<<<<<< HEAD
-    rating: row.rating,
-    comment: row.comment,
-    status: row.status,
-    createdAt: row.created_at,
-  };
-}
-
-export function toAdminReviewJSON(row: ReviewRow) {
-  return {
-    id: row.id,
-    productId: row.product_id,
-    userName: row.user_name,
-    userEmail: row.user_email,
-=======
->>>>>>> 03fb960 (rebuild)
     rating: row.rating,
     comment: row.comment,
     status: row.status,
@@ -226,48 +186,13 @@ export function toAdminReviewJSON(row: ReviewRow) {
   };
 }
 
-export function toPublicOrderJSON(row: OrderRow, items: OrderItemRow[]) {
-  const addr = safeJsonParse(row.shipping_address, {});
-  return {
-    id: row.id,
-    orderNumber: row.order_number,
-    customerName: row.customer_name,
-    // Redact exact physical address, expose only city/country/pincode for privacy
-    shippingSummary: {
-      city: addr.city || '',
-      state: addr.state || '',
-      country: addr.country || '',
-      pincode: (addr.pincode || addr.postalCode) ? `${String(addr.pincode || addr.postalCode).slice(0, 2)}***` : '',
-    },
-    items: items.map((i) => ({
-      product: { id: i.product_id, title: i.product_title },
-      selectedSize: i.selected_size,
-      quantity: i.quantity,
-      price: i.price,
-    })),
-    subtotal: row.subtotal,
-    tax: row.tax,
-    shippingFee: row.shipping_fee,
-    total: row.total,
-    status: row.status,
-    paymentStatus: row.payment_status,
-    paymentMethod: row.payment_method,
-    trackingNumber: row.tracking_number,
-    createdAt: row.created_at,
-  };
-}
-
 export function toOrderJSON(row: OrderRow, items: OrderItemRow[]) {
   return {
     id: row.id,
     orderNumber: row.order_number,
     customerName: row.customer_name,
     customerEmail: row.customer_email,
-<<<<<<< HEAD
-    shippingAddress: safeJsonParse(row.shipping_address, {}),
-=======
     shippingAddress: safeJsonParseObject(row.shipping_address),
->>>>>>> 03fb960 (rebuild)
     items: items.map((i) => ({
       product: { id: i.product_id, title: i.product_title },
       selectedSize: i.selected_size,

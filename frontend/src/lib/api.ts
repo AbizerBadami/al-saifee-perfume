@@ -1,9 +1,6 @@
 // Centralized API client — typed, consistent errors
 const API_BASE = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '') || '/api';
 
-<<<<<<< HEAD
-const API_BASE = import.meta.env.VITE_API_URL || 'https://al-saifee-api.al-saifee-worker.workers.dev/api';
-=======
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -11,7 +8,6 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
->>>>>>> 03fb960 (rebuild)
 
 export function getToken(): string | null {
   try { return localStorage.getItem('alsaifee_token') || localStorage.getItem('al_saifee_token'); }

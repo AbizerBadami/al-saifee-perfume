@@ -1,48 +1,13 @@
-<<<<<<< HEAD
-// ============================================================
-// Products API Routes
-// Hardened with:
-//   - Zod schema validation on creation and updates
-//   - Rate limiting on public catalog queries
-//   - RBAC authGuard protection on administrative CRUD
-// ============================================================
-
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
-=======
 // Products API Routes — validated, paginated
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
->>>>>>> 03fb960 (rebuild)
 import type { Bindings, ProductRow } from '../types';
 import { toProductJSON } from '../types';
 import { authGuard } from '../middleware/auth';
-import { rateLimiter } from '../middleware/rateLimiter';
 
 const products = new Hono<{ Bindings: Bindings }>();
 
-<<<<<<< HEAD
-// ---------- Validation Schemas ----------
-
-const productSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(200),
-  subtitle: z.string().trim().max(200).default(''),
-  category: z.enum(['Perfumes', 'Pure Attars', 'Artisanal Extracts', 'Oud Specials']),
-  fragranceFamily: z.enum(['Woody', 'Amber', 'Floral', 'Oriental', 'Fresh', 'Spicy']),
-  price: z.number().positive('Price must be greater than 0'),
-  salePrice: z.number().positive().nullable().optional(),
-  stock: z.number().int().nonnegative('Stock cannot be negative').default(0),
-  description: z.string().trim().max(4000).default(''),
-  topNotes: z.array(z.string()).default([]),
-  middleNotes: z.array(z.string()).default([]),
-  baseNotes: z.array(z.string()).default([]),
-  longevity: z.string().trim().max(100).default(''),
-  projection: z.string().trim().max(100).default(''),
-  bottleSizes: z.array(z.string()).default([]),
-  images: z.array(z.string()).default([]),
-=======
 const CATEGORIES = ['Perfumes', 'Pure Attars', 'Artisanal Extracts', 'Oud Specials'] as const;
 const FAMILIES = ['Woody', 'Amber', 'Floral', 'Oriental', 'Fresh', 'Spicy'] as const;
 
@@ -62,19 +27,10 @@ const productSchema = z.object({
   projection: z.string().trim().max(120).default(''),
   bottleSizes: z.array(z.string().trim().max(40)).max(12).default([]),
   images: z.array(z.string().trim().url().max(2000)).max(12).default([]),
->>>>>>> 03fb960 (rebuild)
   isFeatured: z.boolean().default(false),
   isBestSeller: z.boolean().default(false),
 });
 
-<<<<<<< HEAD
-const productUpdateSchema = productSchema.partial();
-
-// ---------- Route Handlers ----------
-
-// GET /api/products — List all products (public, cached/rate-limited)
-products.get('/', rateLimiter(60, 60), async (c) => {
-=======
 const productPatchSchema = productSchema.partial();
 
 // GET /api/products — public, paginated + filterable
@@ -93,7 +49,6 @@ products.get('/', async (c) => {
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const countRow = await c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM products ${clause}`).bind(...params).first<{ cnt: number }>();
->>>>>>> 03fb960 (rebuild)
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM products ${clause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
   ).bind(...params, limit, offset).all<ProductRow>();
@@ -101,31 +56,18 @@ products.get('/', async (c) => {
   return c.json({ products: results.map(toProductJSON), total: countRow?.cnt ?? results.length, limit, offset });
 });
 
-<<<<<<< HEAD
-// GET /api/products/:id — Single product (public)
-products.get('/:id', rateLimiter(60, 60), async (c) => {
-  const id = c.req.param('id');
-=======
 // GET /api/products/:id — public
 products.get('/:id', async (c) => {
   const id = c.req.param('id').slice(0, 128);
->>>>>>> 03fb960 (rebuild)
   const row = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first<ProductRow>();
   if (!row) return c.json({ error: 'Product not found', code: 'NOT_FOUND' }, 404);
   return c.json({ product: toProductJSON(row) });
 });
 
-<<<<<<< HEAD
-// POST /api/products — Create product (admin only, validated)
-products.post('/', authGuard, zValidator('json', productSchema), async (c) => {
-  const body = c.req.valid('json');
-  const id = `prod-${crypto.randomUUID().slice(0, 12)}`;
-=======
 // POST /api/products — admin only
 products.post('/', authGuard, zValidator('json', productSchema), async (c) => {
   const body = c.req.valid('json');
   const id = `prod-${crypto.randomUUID()}`;
->>>>>>> 03fb960 (rebuild)
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(
@@ -146,15 +88,9 @@ products.post('/', authGuard, zValidator('json', productSchema), async (c) => {
   return c.json({ product: toProductJSON(created!) }, 201);
 });
 
-<<<<<<< HEAD
-// PUT /api/products/:id — Update product (admin only, validated)
-products.put('/:id', authGuard, zValidator('json', productUpdateSchema), async (c) => {
-  const id = c.req.param('id');
-=======
 // PUT /api/products/:id — admin only
 products.put('/:id', authGuard, zValidator('json', productPatchSchema), async (c) => {
   const id = c.req.param('id').slice(0, 128);
->>>>>>> 03fb960 (rebuild)
   const body = c.req.valid('json');
 
   const existing = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first<ProductRow>();

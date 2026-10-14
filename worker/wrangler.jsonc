@@ -1,40 +1,4 @@
 {
-<<<<<<< HEAD
-	"name": "al-saifee-api",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-01-01",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
-	// D1 Database binding
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "al-saifee-db",
-			"database_id": "e4acffd2-a701-4d5f-93b7-adac278fb11a",
-			"remote": true
-		}
-	],
-	// Environment variables (non-secret, for dev)
-	"vars": {
-		"FRONTEND_URL": "https://al-saifee-frontend.al-saifee-worker.workers.dev",
-		"JWT_EXPIRES_IN": "86400"
-	},
-	"observability": {
-		"enabled": true
-	},
-	"ratelimits": [
-		{
-			"name": "RATE_LIMITER",
-			"namespace_id": "1001",
-			"simple": {
-				"limit": 60,
-				"period": 60
-			}
-		}
-	]
-}
-=======
   "name": "al-saifee-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-01-01",
@@ -67,4 +31,3 @@
   //   }
   // }
 }
->>>>>>> 03fb960 (rebuild)

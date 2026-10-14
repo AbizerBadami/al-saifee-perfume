@@ -48,12 +48,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-<<<<<<< HEAD
-  // Security: Do not persist orders in unencrypted localStorage
-=======
   // Orders live only in D1 (created via Razorpay verify). Never persisted to
   // browser storage: they contain customer PII and go stale instantly.
->>>>>>> 03fb960 (rebuild)
   const [orders, setOrders] = useState<Order[]>([]);
 
   const [reviews, setReviews] = useState<Review[]>(() => {
@@ -238,46 +234,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-<<<<<<< HEAD
-  // Orders CRUD
-  const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt'>): Promise<Order> => {
-    try {
-      const created = await ordersAPI.create(orderData);
-      setOrders((prev) => {
-        const updated = [created, ...prev];
-        window.dispatchEvent(new Event('order_updated'));
-        return updated;
-      });
-      return created;
-    } catch (e) {
-      // Fallback: create locally
-      const newOrder: Order = {
-        ...orderData,
-        id: 'ord-' + Date.now(),
-        createdAt: new Date().toISOString(),
-      };
-      setOrders((prev) => {
-        const updated = [newOrder, ...prev];
-        window.dispatchEvent(new Event('order_updated'));
-        return updated;
-      });
-      return newOrder;
-    }
-  };
-
-  const updateOrderStatus = async (orderId: string, status: Order['status'], trackingNumber?: string) => {
-    setOrders((prev) => {
-      const updated = prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o));
-      window.dispatchEvent(new Event('order_updated'));
-      return updated;
-    });
-
-    try {
-      await ordersAPI.updateStatus(orderId, { status, trackingNumber });
-    } catch (e) {
-      console.warn('Updated order status locally');
-    }
-=======
   // Orders are created server-side via Razorpay checkout verify only.
   // There is intentionally no client-side createOrder (no POST /api/orders):
   // totals, stock and payment state are authoritative on the Worker.
@@ -287,7 +243,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o))
     );
->>>>>>> 03fb960 (rebuild)
   };
 
   const getOrderById = (orderId: string) => {
