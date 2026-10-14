@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FiStar } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
 import styles from './ReviewSection.module.css';
 
 export const ReviewSection: React.FC<{ productId: string }> = ({ productId }) => {
   const { reviews, addReview } = useStore();
+  const { isCustomer, customer } = useAuth();
   const list = reviews.filter((r) => r.productId === productId && r.status === 'Approved');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -15,19 +17,22 @@ export const ReviewSection: React.FC<{ productId: string }> = ({ productId }) =>
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  React.useEffect(() => {
+    if (customer?.name) setName((n) => n || customer.name);
+  }, [customer]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setDone('');
     if (!name.trim() || !comment.trim()) { setError('Please add your name and review.'); return; }
-    if (!email.trim()) { setError('Enter the email you used at checkout so we can verify your purchase.'); return; }
     if (!orderNumber.trim()) { setError('Enter your order number (e.g. ASP-123456) from your confirmation email.'); return; }
     if (rating < 1 || rating > 5) { setError('Rating must be between 1 and 5.'); return; }
     setBusy(true);
     try {
-      await addReview(productId, name.trim(), email.trim(), orderNumber.trim(), rating, comment.trim());
+      await addReview(productId, name.trim(), orderNumber.trim(), rating, comment.trim());
       setDone('Thanks — your verified review was submitted for moderation.');
-      setName(''); setEmail(''); setOrderNumber(''); setComment(''); setRating(5);
+      setOrderNumber(''); setComment(''); setRating(5);
       setTimeout(() => setDone(''), 8000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit review. Please try again.');
@@ -59,10 +64,19 @@ export const ReviewSection: React.FC<{ productId: string }> = ({ productId }) =>
         </ul>
       )}
 
+      {!isCustomer ? (
+        <div className={styles.form}>
+          <h3>Write a review</h3>
+          <p className="muted" style={{ fontSize: '0.87rem' }}>
+            <Link to={`/login?redirect=${encodeURIComponent(`/product/${productId}`)}`} style={{ fontWeight: 650, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign in</Link>
+            {' '}with your shopping account to write a verified review.
+          </p>
+        </div>
+      ) : (
       <form className={styles.form} onSubmit={submit}>
         <h3>Write a review</h3>
         <p className="muted" style={{ fontSize: '0.87rem' }}>
-          Only verified buyers can review. Use the order number and checkout email from your confirmation.
+          Reviewing as <strong>{customer?.email}</strong>. Use the order number from your confirmation.
           Reviews are moderated before they appear.
         </p>
         <div className={styles.starsBtn} role="radiogroup" aria-label="Your rating">
@@ -79,16 +93,12 @@ export const ReviewSection: React.FC<{ productId: string }> = ({ productId }) =>
             <input id={`rn-${productId}`} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} autoComplete="name" />
           </div>
           <div>
-            <label htmlFor={`re-${productId}`}>Checkout email *</label>
-            <input id={`re-${productId}`} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} autoComplete="email" />
+            <label htmlFor={`ro-${productId}`}>Order number *</label>
+            <input
+              id={`ro-${productId}`} value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)}
+              required maxLength={64} placeholder="ASP-123456" autoComplete="off"
+            />
           </div>
-        </div>
-        <div>
-          <label htmlFor={`ro-${productId}`}>Order number *</label>
-          <input
-            id={`ro-${productId}`} value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)}
-            required maxLength={64} placeholder="ASP-123456" autoComplete="off"
-          />
         </div>
         <div>
           <label htmlFor={`rc-${productId}`}>Review *</label>
@@ -98,6 +108,7 @@ export const ReviewSection: React.FC<{ productId: string }> = ({ productId }) =>
         {done && <p className="alert alert-success" role="status">{done}</p>}
         <button type="submit" className="btn btn-secondary" disabled={busy}>{busy ? 'Submitting…' : 'Submit verified review'}</button>
       </form>
+      )}
     </section>
   );
 };

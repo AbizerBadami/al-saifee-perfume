@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiShoppingBag, FiHeart, FiSearch, FiMenu, FiX, FiMoon, FiSun } from 'react-icons/fi';
+import { FiShoppingBag, FiHeart, FiSearch, FiMenu, FiX, FiMoon, FiSun, FiUser } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import styles from './Navbar.module.css';
 
@@ -11,6 +12,7 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { itemCount, openCart } = useCart();
   const { wishlist, settings } = useStore();
+  const { isCustomer, customer } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -37,6 +39,11 @@ export const Navbar: React.FC = () => {
   };
 
   const linkCls = ({ isActive }: { isActive: boolean }) => (isActive ? `${styles.navLink} ${styles.active}` : styles.navLink);
+
+  const requireAuth = (to: string) => {
+    if (!isCustomer) navigate(`/login?redirect=${encodeURIComponent(to)}`);
+    else navigate(to);
+  };
 
   return (
     <>
@@ -71,14 +78,26 @@ export const Navbar: React.FC = () => {
                 autoComplete="off"
               />
             </form>
-            <Link to="/wishlist" className={styles.iconBtn} aria-label={`Wishlist, ${wishlist.length} items`}>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={() => requireAuth('/wishlist')}
+              aria-label={isCustomer ? `Wishlist, ${wishlist.length} items` : 'Sign in to use wishlist'}
+            >
               <FiHeart aria-hidden="true" />
-              {wishlist.length > 0 && <span className={styles.badge} aria-hidden="true">{wishlist.length}</span>}
-            </Link>
-            <button className={styles.iconBtn} onClick={openCart} aria-label={`Open cart, ${itemCount} items`}>
-              <FiShoppingBag aria-hidden="true" />
-              {itemCount > 0 && <span className={styles.badge} aria-hidden="true" aria-live="polite">{itemCount}</span>}
+              {isCustomer && wishlist.length > 0 && <span className={styles.badge} aria-hidden="true">{wishlist.length}</span>}
             </button>
+            <button
+              className={styles.iconBtn}
+              onClick={() => { if (!isCustomer) navigate('/login?redirect=%2Fcheckout'); else openCart(); }}
+              aria-label={isCustomer ? `Open cart, ${itemCount} items` : 'Sign in to use cart'}
+            >
+              <FiShoppingBag aria-hidden="true" />
+              {isCustomer && itemCount > 0 && <span className={styles.badge} aria-hidden="true" aria-live="polite">{itemCount}</span>}
+            </button>
+            <Link to={isCustomer ? '/account' : '/login'} className={styles.iconBtn} aria-label={isCustomer ? `Account (${customer?.email})` : 'Sign in'}>
+              <FiUser aria-hidden="true" />
+            </Link>
             <button className={styles.iconBtn} onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
               {isDark ? <FiSun aria-hidden="true" /> : <FiMoon aria-hidden="true" />}
             </button>
@@ -109,7 +128,14 @@ export const Navbar: React.FC = () => {
               <Link to="/shop?category=Oud%20Specials" className={styles.mobileLink}>Oud Specials</Link>
               <Link to="/shop?category=Perfumes" className={styles.mobileLink}>Perfumes</Link>
               <Link to="/tracking" className={styles.mobileLink}>Track order</Link>
-              <Link to="/wishlist" className={styles.mobileLink}>Wishlist</Link>
+              {isCustomer ? (
+                <>
+                  <Link to="/wishlist" className={styles.mobileLink}>Wishlist</Link>
+                  <Link to="/account" className={styles.mobileLink}>My account</Link>
+                </>
+              ) : (
+                <Link to="/login" className={styles.mobileLink}>Sign in / Register</Link>
+              )}
             </nav>
           </div>
         )}

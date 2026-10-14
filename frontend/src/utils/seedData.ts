@@ -212,7 +212,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   storeName: 'Al-Saifee Perfumes',
   supportEmail: 'concierge@alsaifeeperfumes.com',
   currencySymbol: '₹',
-  taxRate: 0.1, // 10%
+  taxRate: 0, // zero tax store-wide
   freeShippingThreshold: 999,
   promoMessage: 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • 100% NON-ALCOHOLIC PURE PERFUME OILS',
 };

@@ -100,7 +100,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
 
 // ---------- Hono middleware ----------
 
-/** Protect routes: requires valid JWT in `Authorization: Bearer <token>` */
+/** Protect routes: requires valid admin JWT in `Authorization: Bearer <token>`.
+ *  Customer tokens (role=customer) are rejected here. */
 export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -117,6 +118,9 @@ export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Varia
   if (!payload) {
     return c.json({ error: 'Unauthorized — session expired, please sign in again', code: 'UNAUTHORIZED' }, 401);
   }
+  if (payload.role === 'customer') {
+    return c.json({ error: 'Forbidden — admin access required', code: 'FORBIDDEN' }, 403);
+  }
 
   // Attach admin info to the context for downstream handlers
   c.set('adminId', payload.sub as string);
@@ -125,14 +129,39 @@ export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Varia
   await next();
 });
 
+/** Protect routes: requires valid customer JWT (role=customer). Attaches
+ *  customerId + customerEmail to context. Admin tokens are rejected here. */
+export const customerGuard = createMiddleware<{ Bindings: Bindings; Variables: Variables & { customerId: string; customerEmail: string } }>(async (c, next) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'Please sign in to continue', code: 'UNAUTHORIZED' }, 401);
+  }
+
+  if (!c.env.JWT_SECRET) {
+    console.error('JWT_SECRET missing');
+    return c.json({ error: 'Server auth is not configured', code: 'CONFIG' }, 500);
+  }
+
+  const token = authHeader.slice(7);
+  const payload = await verifyJWT(token, c.env.JWT_SECRET);
+  if (!payload || payload.role !== 'customer') {
+    return c.json({ error: 'Please sign in to continue', code: 'UNAUTHORIZED' }, 401);
+  }
+
+  c.set('customerId', payload.sub as string);
+  c.set('customerEmail', payload.email as string);
+
+  await next();
+});
+
 /** Best-effort admin check for mixed public/admin endpoints (e.g. review moderation queues).
- *  Returns true only when a valid admin JWT is present. Never throws. */
+ *  Returns true only when a valid admin JWT is present (customer tokens excluded). Never throws. */
 export async function isAdminRequest(c: { req: { header: (n: string) => string | undefined }; env: Bindings }): Promise<boolean> {
   try {
     const h = c.req.header('Authorization');
     if (!h?.startsWith('Bearer ') || !c.env.JWT_SECRET) return false;
     const payload = await verifyJWT(h.slice(7), c.env.JWT_SECRET);
-    return Boolean(payload?.sub);
+    return Boolean(payload?.sub) && payload?.role !== 'customer';
   } catch {
     return false;
   }

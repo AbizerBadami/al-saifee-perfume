@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiLock, FiArrowLeft } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { checkoutAPI } from '../lib/api';
 import styles from './Checkout.module.css';
 
@@ -9,9 +10,10 @@ const COUNTRIES = ['India', 'United Arab Emirates', 'Saudi Arabia', 'Kuwait', 'Q
 
 export const Checkout: React.FC = () => {
   const { cart, subtotal, tax, taxRate, shippingFee, total, clearCart } = useCart();
+  const { customer } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    fullName: '', email: '', phone: '',
+    fullName: customer?.name || '', phone: '',
     addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: 'India',
   });
   const [policy, setPolicy] = useState(false);
@@ -39,7 +41,7 @@ export const Checkout: React.FC = () => {
     if (cart.some((i) => i.product.stock <= 0)) { setError('One or more items in your cart is out of stock. Please remove it and try again.'); return; }
     setBusy(true);
     try {
-      const created = await checkoutAPI.createOrder(cart, 'INR', form.fullName.trim(), form.email.trim());
+      const created = await checkoutAPI.createOrder(cart, 'INR', form.fullName.trim());
       const options = {
         key: created.keyId,
         amount: created.amount,
@@ -47,7 +49,7 @@ export const Checkout: React.FC = () => {
         name: 'Al-Saifee Perfumes',
         description: 'Fragrance order',
         order_id: created.orderId,
-        prefill: { name: form.fullName, email: form.email, contact: form.phone },
+        prefill: { name: form.fullName, email: customer?.email || '', contact: form.phone },
         notes: { address: `${form.addressLine1}, ${form.city} ${form.postalCode}` },
         theme: { color: '#1c1b1a' },
         modal: { ondismiss: () => setBusy(false) },
@@ -60,7 +62,6 @@ export const Checkout: React.FC = () => {
               items: cart,
               shippingAddress: form,
               customerName: form.fullName.trim(),
-              customerEmail: form.email.trim(),
             });
             if (result.verified && result.orderId) {
               try {
@@ -113,19 +114,18 @@ export const Checkout: React.FC = () => {
           <div className={styles.form}>
             <fieldset>
               <legend>Contact</legend>
+              <p className={styles.payBox} style={{ marginBottom: '0.9rem' }}>
+                Ordering as <strong>{customer?.email}</strong> — receipt and tracking go here.
+              </p>
               <div className={styles.grid2}>
                 <div>
                   <label htmlFor="co-name">Full name *</label>
                   <input id="co-name" name="fullName" value={form.fullName} onChange={set} required minLength={2} maxLength={120} autoComplete="name" />
                 </div>
                 <div>
-                  <label htmlFor="co-email">Email *</label>
-                  <input id="co-email" type="email" name="email" value={form.email} onChange={set} required maxLength={160} autoComplete="email" />
+                  <label htmlFor="co-phone">Phone *</label>
+                  <input id="co-phone" type="tel" name="phone" value={form.phone} onChange={set} required pattern="[0-9+ -]{10,16}" title="10–16 digits" autoComplete="tel" inputMode="tel" />
                 </div>
-              </div>
-              <div>
-                <label htmlFor="co-phone">Phone *</label>
-                <input id="co-phone" type="tel" name="phone" value={form.phone} onChange={set} required pattern="[0-9+ -]{10,16}" title="10–16 digits" autoComplete="tel" inputMode="tel" />
               </div>
             </fieldset>
 

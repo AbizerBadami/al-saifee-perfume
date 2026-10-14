@@ -11,7 +11,7 @@
     "db:init:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/schema.sql",
     "db:seed:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/seed.sql",
     "db:reset:local": "npm run db:init:local && npm run db:seed:local",
-    "db:migrate:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0002.sql && wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0003.sql && wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0004.sql",
+    "db:migrate:remote": "wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0002.sql && wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0003.sql && wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0004.sql && wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0005.sql",
     "admin:create": "node scripts/create-admin.mjs",
     "typecheck": "tsc --noEmit"
   },

@@ -40,7 +40,7 @@ settings.get('/', rateLimiter(30, 60), async (c) => {
       storeName: 'Al-Saifee Perfumes',
       supportEmail: 'concierge@alsaifeeperfumes.com',
       currencySymbol: '₹',
-      taxRate: 0.10,
+      taxRate: 0,
       freeShippingThreshold: 999,
       promoMessage: '',
     });

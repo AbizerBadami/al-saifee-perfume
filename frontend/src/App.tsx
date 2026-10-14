@@ -16,6 +16,9 @@ import { Checkout } from './pages/Checkout';
 import { Success } from './pages/Success';
 import { OrderTracking } from './pages/OrderTracking';
 import { Wishlist } from './pages/Wishlist';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Account } from './pages/Account';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { useAuth } from './context/AuthContext';
@@ -32,6 +35,17 @@ function RequireAdmin({ children }: { children: React.ReactElement }) {
   const { isAdmin, loading } = useAuth();
   if (loading) return <div className="container" style={{ padding: '4rem 1.25rem' }}><p className="muted">Checking access…</p></div>;
   if (!isAdmin) return <AdminLogin />;
+  return children;
+}
+
+function RequireCustomer({ children }: { children: React.ReactElement }) {
+  const { isCustomer, customerLoading } = useAuth();
+  const location = useLocation();
+  if (customerLoading) return <div className="container" style={{ padding: '4rem 1.25rem' }}><p className="muted">Checking access…</p></div>;
+  if (!isCustomer) {
+    const redirect = `${location.pathname}${location.search}`;
+    return <Login redirectTo={redirect} />;
+  }
   return children;
 }
 
@@ -52,10 +66,13 @@ export function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/product/:id" element={<ProductDetail />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/success" element={<Success />} />
+                    <Route path="/checkout" element={<RequireCustomer><Checkout /></RequireCustomer>} />
+                    <Route path="/success" element={<RequireCustomer><Success /></RequireCustomer>} />
                     <Route path="/tracking" element={<OrderTracking />} />
-                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/wishlist" element={<RequireCustomer><Wishlist /></RequireCustomer>} />
+                    <Route path="/account" element={<RequireCustomer><Account /></RequireCustomer>} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
                     <Route path="*" element={<Home />} />

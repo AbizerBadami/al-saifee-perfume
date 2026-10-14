@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FiHeart, FiShoppingBag, FiArrowLeft, FiMinus, FiPlus } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
@@ -9,6 +9,7 @@ import styles from './ProductDetail.module.css';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { products, isInWishlist, toggleWishlist } = useStore();
   const { addToCart } = useCart();
   const product = products.find((p) => p.id === id);
@@ -111,13 +112,19 @@ export const ProductDetail: React.FC = () => {
                 <span aria-live="polite" aria-label={`Quantity ${qty}`}>{qty}</span>
                 <button type="button" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty || out} aria-label="Increase quantity"><FiPlus /></button>
               </div>
-              <button type="button" className="btn btn-primary" disabled={out} onClick={() => addToCart(product, activeSize, qty)} style={{ flex: 1 }}>
+              <button type="button" className="btn btn-primary" disabled={out} onClick={() => {
+                const r = addToCart(product, activeSize, qty);
+                if (r.reason === 'auth_required') navigate(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+              }} style={{ flex: 1 }}>
                 <FiShoppingBag /> {out ? 'Out of stock' : `Add to cart · ₹${(price * qty).toLocaleString('en-IN')}`}
               </button>
               <button
                 type="button" className={`${styles.wish} ${wished ? styles.wished : ''}`}
-                onClick={() => toggleWishlist(product.id)} aria-pressed={wished}
-                aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}
+                onClick={async () => {
+                  const r = await toggleWishlist(product.id);
+                  if (r.authRequired) navigate(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+                }} aria-pressed={wished}
+                aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist (sign-in required)'}
               ><FiHeart /></button>
             </div>
 

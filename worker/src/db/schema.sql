@@ -1,7 +1,6 @@
 -- ============================================================
--- Al-Saifee Perfumes — Cloudflare D1 Schema (v2)
--- Run on fresh DB: schema.sql
--- Run on existing DB: src/db/migration-0002.sql
+-- Al-Saifee Perfumes — Cloudflare D1 Schema (v4: customer accounts)
+-- Fresh DB: schema.sql. Existing DB: migrations 0002→0005 in order.
 -- ============================================================
 
 -- Products catalog
@@ -40,6 +39,7 @@ CREATE TABLE IF NOT EXISTS orders (
   order_number        TEXT UNIQUE NOT NULL,
   customer_name       TEXT NOT NULL,
   customer_email      TEXT NOT NULL,
+  customer_id         TEXT REFERENCES customers(id) ON DELETE SET NULL,
   shipping_address    TEXT NOT NULL DEFAULT '{}',
   subtotal            REAL NOT NULL CHECK (subtotal >= 0),
   tax                 REAL NOT NULL CHECK (tax >= 0),
@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_email ON orders(customer_email);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 
@@ -97,10 +98,29 @@ CREATE TABLE IF NOT EXISTS store_settings (
   store_name              TEXT NOT NULL DEFAULT 'Al-Saifee Perfumes',
   support_email           TEXT NOT NULL DEFAULT 'concierge@alsaifeeperfumes.com',
   currency_symbol         TEXT NOT NULL DEFAULT '₹',
-  tax_rate                REAL NOT NULL DEFAULT 0.10 CHECK (tax_rate >= 0 AND tax_rate <= 1),
+  tax_rate                REAL NOT NULL DEFAULT 0 CHECK (tax_rate >= 0 AND tax_rate <= 1),
   free_shipping_threshold REAL NOT NULL DEFAULT 999 CHECK (free_shipping_threshold >= 0),
   promo_message           TEXT NOT NULL DEFAULT ''
 );
+
+-- Customer accounts (shopper login; wishlist/cart/orders require auth)
+CREATE TABLE IF NOT EXISTS customers (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  email         TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+
+-- Server-side wishlist (one row per customer+product)
+CREATE TABLE IF NOT EXISTS wishlist (
+  customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  product_id  TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (customer_id, product_id)
+);
+CREATE INDEX IF NOT EXISTS idx_wishlist_customer ON wishlist(customer_id);
 
 -- Admin users — exactly ONE row, provisioned directly in D1 (never via API).
 -- Create it with: node worker/scripts/create-admin.mjs admin@example.com 'StrongPass...'

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, CartItem } from '../types';
+import { getCustomerToken } from '../lib/api';
 
 interface CartContextType {
   cart: CartItem[];
@@ -34,13 +35,13 @@ function readSettings(): { taxRate: number; freeShippingThreshold: number } {
       if (s) {
         const p = JSON.parse(s);
         return {
-          taxRate: typeof p.taxRate === 'number' ? p.taxRate : 0.1,
+          taxRate: typeof p.taxRate === 'number' ? p.taxRate : 0,
           freeShippingThreshold: typeof p.freeShippingThreshold === 'number' ? p.freeShippingThreshold : 999,
         };
       }
     }
   } catch {}
-  return { taxRate: 0.1, freeShippingThreshold: 999 };
+  return { taxRate: 0, freeShippingThreshold: 999 };
 }
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -72,6 +73,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   }, [cart]);
 
+  // Clear local cart on customer sign-out (prevents account mixing).
+  useEffect(() => {
+    const reset = () => setCart([]);
+    window.addEventListener('alsaifee_customer_cart_reset', reset);
+    window.addEventListener('alsaifee_customer_logout', reset);
+    return () => {
+      window.removeEventListener('alsaifee_customer_cart_reset', reset);
+      window.removeEventListener('alsaifee_customer_logout', reset);
+    };
+  }, []);
   // Lock body scroll while drawer open
   useEffect(() => {
     document.body.style.overflow = isCartOpen ? 'hidden' : '';
@@ -83,6 +94,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleCart = useCallback(() => setIsCartOpen((v) => !v), []);
 
   const addToCart = useCallback((product: Product, selectedSize?: string, quantity: number = 1) => {
+    // Cart is a signed-in action: guests are sent to login by the caller.
+    if (!getCustomerToken()) return { added: false, reason: 'auth_required' };
     if (!product || product.stock <= 0) return { added: false, reason: 'out_of_stock' };
     const size = selectedSize || product.bottleSizes?.[0] || 'Standard';
     const qty = Math.max(1, Math.min(quantity, 10));

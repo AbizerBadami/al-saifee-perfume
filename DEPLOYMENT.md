@@ -4,7 +4,9 @@
 - Frontend: Vite + React SPA on Cloudflare Pages (`frontend/`, SPA fallback via `public/_redirects`).
 - API: Hono Worker (`worker/src/index.ts`) + D1 (`al-saifee-db`).
 - Payments: Razorpay Orders API + Checkout.js + HMAC verification (`worker/src/routes/checkout.ts`).
-- No customer accounts; admin-only JWT (`/api/auth/*`).
+- No guest checkout: shopper accounts (`customers`), customer JWTs (`/api/customer/*`),
+  server-side wishlist, orders linked to `customer_id`. Single admin JWT (`/api/auth/*`).
+- Tax is 0 store-wide (hardcoded in checkout totals; `store_settings.tax_rate = 0`).
 
 ## 1. Environment & secrets
 | Key | Where | Notes |
@@ -40,6 +42,7 @@ Existing production DB — apply non-destructive migrations in order:
 wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0002.sql
 wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0003.sql
 wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0004.sql
+wrangler d1 execute al-saifee-db --remote --file=src/db/migration-0005.sql
 ```
 Backup before every migration:
 ```bash
@@ -65,17 +68,18 @@ SELECT order_number, razorpay_payment_id FROM orders LIMIT 5;
 - Alerts: Razorpay webhook failures / `verify` 409 spikes indicate stock or fraud issues.
 
 ## 5. Production smoke test (must pass)
+- [x] Guest walls: wishlist/cart/checkout/review without customer JWT → 401 (verified live).
+- [x] Register → wishlist add/list, `me`, my-orders, customer-on-admin-route → 403 (verified live).
+- [x] Review without purchase → 404/403 (verified live); `taxRate: 0` in `/api/settings` (verified live).
+- [ ] Checkout `create-order` amount check (₹2499 for prod-001 × 1 with zero tax) — BLOCKED: Razorpay returns non-OK (see §6).
 - [ ] Home, Shop, Product, Wishlist render on mobile 360px + desktop 1440px, no horizontal scroll.
 - [ ] Search, category filter, sort, “in stock only”, pagination work; empty state shows.
 - [ ] Out-of-stock product: Add disabled on card + detail; cart caps quantity at stock.
-- [ ] Checkout with test Razorpay key: success → `/success` with order number; cancel → stays on checkout, no order; duplicate `verify` with same `razorpay_payment_id` returns same order (no duplicate).
+- [ ] Full Razorpay test payment → `/success` with order number; cancel → stays on checkout, no order; duplicate `verify` with same `razorpay_payment_id` returns same order.
 - [ ] Tracking with order number + email works; wrong email is rejected with a clear message.
 - [ ] Admin login (single DB-provisioned admin), product CRUD, order status update work.
-- [ ] Review moderation: verified buyer submits with order number + checkout email → Pending;
-      fake order / wrong email / product-not-in-order is rejected; admin approves → visible with ✓ Verified purchase;
-      `GET /reviews?status=Pending` without admin token returns 401.
-- [ ] `POST /api/auth/register` returns 403 REGISTRATION_DISABLED.
-- [ ] No secrets in `dist/` (`grep -ri razorpay_key_secret dist` empty; only publishable `keyId` is exposed by design).
+- [ ] Review moderation: verified buyer submits with order number → Pending; admin approves → visible with ✓ Verified purchase.
+- [ ] No secrets in `dist/` (only publishable `keyId` is exposed by design).
 - [ ] `robots.txt`, `sitemap.xml`, OG tags, canonical URL correct.
 
 ## 6. Incident response

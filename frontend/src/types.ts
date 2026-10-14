@@ -72,6 +72,12 @@ export interface Order {
   createdAt: string;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface Review {
   id: string;
   productId: string;

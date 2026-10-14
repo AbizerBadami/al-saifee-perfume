@@ -64,6 +64,7 @@ export interface OrderRow {
   tracking_number: string | null;
   razorpay_order_id: string | null;
   razorpay_payment_id: string | null;
+  customer_id: string | null;
   created_at: string;
 }
 
@@ -119,6 +120,14 @@ export interface StoreSettingsRow {
 
 export interface AdminRow {
   id: string;
+  email: string;
+  password_hash: string;
+  created_at: string;
+}
+
+export interface CustomerRow {
+  id: string;
+  name: string;
   email: string;
   password_hash: string;
   created_at: string;

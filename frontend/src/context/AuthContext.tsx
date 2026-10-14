@@ -1,16 +1,10 @@
-<<<<<<< HEAD
-// ============================================================
-// AuthContext — JWT-based admin authentication
-// Secure Implementation:
-//   - isAdmin is strictly derived from /api/auth/me (never localStorage)
-//   - Zero reliance on client-side tampered storage flags
-//   - Clean session invalidation on expiration
-// ============================================================
-
-=======
->>>>>>> 03fb960 (rebuild)
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI, setToken, clearToken, getToken } from '../lib/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  authAPI, customerAPI,
+  setToken, clearToken, getToken,
+  setCustomerToken, clearCustomerToken, getCustomerToken,
+} from '../lib/api';
+import type { Customer } from '../types';
 
 interface AdminUser {
   id: string;
@@ -18,11 +12,19 @@ interface AdminUser {
 }
 
 interface AuthContextType {
+  // Admin (single DB-provisioned account)
   user: AdminUser | null;
   isAdmin: boolean;
   loading: boolean;
   loginAdmin: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Customer (shopper accounts; wishlist/cart/orders require sign-in)
+  customer: Customer | null;
+  isCustomer: boolean;
+  customerLoading: boolean;
+  loginCustomer: (email: string, pass: string) => Promise<void>;
+  registerCustomer: (name: string, email: string, pass: string) => Promise<void>;
+  logoutCustomer: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,32 +33,6 @@ const LEGACY_FLAG = 'oud_elixir_is_admin';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
-<<<<<<< HEAD
-  // Security fix: never initialize or trust isAdmin from localStorage
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true);
-
-  // On mount, verify current token with backend /api/auth/me
-  useEffect(() => {
-    const token = getToken();
-    if (token) {
-      authAPI
-        .me()
-        .then((data) => {
-          setUser({ id: data.id, email: data.email });
-          setIsAdmin(Boolean(data.isAdmin));
-        })
-        .catch(() => {
-          // Token expired or invalid
-          clearToken();
-          setUser(null);
-          setIsAdmin(false);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setIsAdmin(false);
-      setUser(null);
-=======
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
       if (localStorage.getItem(FLAG) === 'true') return true;
@@ -71,10 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [loading, setLoading] = useState(true);
 
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerLoading, setCustomerLoading] = useState(true);
+  const isCustomer = customer !== null;
+
   useEffect(() => {
     const token = getToken();
     if (!token) {
->>>>>>> 03fb960 (rebuild)
       setLoading(false);
       return;
     }
@@ -102,52 +81,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { cancelled = true; window.removeEventListener('alsaifee_logout', onLogout); };
   }, []);
 
+  useEffect(() => {
+    if (!getCustomerToken()) {
+      setCustomerLoading(false);
+      return;
+    }
+    let cancelled = false;
+    customerAPI.me()
+      .then((data) => { if (!cancelled) setCustomer({ id: data.id, name: data.name, email: data.email }); })
+      .catch(() => { if (!cancelled) { clearCustomerToken(); setCustomer(null); } })
+      .finally(() => { if (!cancelled) setCustomerLoading(false); });
+    const onLogout = () => setCustomer(null);
+    window.addEventListener('alsaifee_customer_logout', onLogout);
+    return () => { cancelled = true; window.removeEventListener('alsaifee_customer_logout', onLogout); };
+  }, []);
+
   const loginAdmin = async (email: string, pass: string) => {
     const data = await authAPI.login(email, pass);
     setToken(data.token);
-<<<<<<< HEAD
-    // Re-verify with /me to ensure server claims
-    try {
-      const me = await authAPI.me();
-      setUser({ id: me.id, email: me.email });
-      setIsAdmin(Boolean(me.isAdmin));
-    } catch {
-      setUser(data.admin);
-      setIsAdmin(true);
-    }
-=======
     setUser(data.admin as AdminUser);
     setIsAdmin(true);
     try { localStorage.setItem(FLAG, 'true'); } catch {}
->>>>>>> 03fb960 (rebuild)
   };
 
   const logout = async () => {
     clearToken();
     setUser(null);
     setIsAdmin(false);
-<<<<<<< HEAD
-    // Cleanup any legacy storage remnants
-    localStorage.removeItem('oud_elixir_is_admin');
+    try { localStorage.removeItem(FLAG); localStorage.removeItem(LEGACY_FLAG); } catch {}
   };
 
-  const setupFirstAdmin = async (email: string, pass: string) => {
-    try {
-      const data = await authAPI.register(email, pass);
-      setToken(data.token);
-      setUser(data.admin);
-      setIsAdmin(true);
-      return { success: true, message: data.message };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Registration failed' };
-    }
-=======
-    try { localStorage.removeItem(FLAG); localStorage.removeItem(LEGACY_FLAG); } catch {}
->>>>>>> 03fb960 (rebuild)
+  const loginCustomer = async (email: string, pass: string) => {
+    const data = await customerAPI.login(email, pass);
+    setCustomerToken(data.token);
+    setCustomer(data.customer);
   };
+
+  const registerCustomer = async (name: string, email: string, pass: string) => {
+    const data = await customerAPI.register(name, email, pass);
+    setCustomerToken(data.token);
+    setCustomer(data.customer);
+  };
+
+  const logoutCustomer = useCallback(() => {
+    clearCustomerToken();
+    setCustomer(null);
+    try {
+      localStorage.removeItem('alsaifee_cart');
+      localStorage.removeItem('alsaifee_wishlist');
+    } catch {}
+    window.dispatchEvent(new Event('alsaifee_customer_cart_reset'));
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, loading, loginAdmin, logout }}>
+    <AuthContext.Provider value={{
+      user, isAdmin, loading, loginAdmin, logout,
+      customer, isCustomer, customerLoading, loginCustomer, registerCustomer, logoutCustomer,
+    }}>
       {children}
     </AuthContext.Provider>
   );

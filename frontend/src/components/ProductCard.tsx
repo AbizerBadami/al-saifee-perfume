@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiHeart, FiShoppingBag, FiStar } from 'react-icons/fi';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -13,6 +13,7 @@ function formatINR(n: number) {
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useStore();
+  const navigate = useNavigate();
   const wished = isInWishlist(product.id);
   const price = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price;
   const out = product.stock <= 0;
@@ -40,9 +41,12 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <button
           type="button"
           className={`${styles.wish} ${wished ? styles.wished : ''}`}
-          onClick={() => toggleWishlist(product.id)}
+          onClick={async () => {
+            const r = await toggleWishlist(product.id);
+            if (r.authRequired) navigate(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+          }}
           aria-pressed={wished}
-          aria-label={wished ? `Remove ${product.title} from wishlist` : `Save ${product.title} to wishlist`}
+          aria-label={wished ? `Remove ${product.title} from wishlist` : `Save ${product.title} to wishlist (sign-in required)`}
         >
           <FiHeart aria-hidden="true" />
         </button>
@@ -66,8 +70,11 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             type="button"
             className="btn btn-primary"
             disabled={out}
-            onClick={() => addToCart(product)}
-            aria-label={out ? `${product.title} is out of stock` : `Add ${product.title} to cart`}
+            onClick={() => {
+              const r = addToCart(product);
+              if (r.reason === 'auth_required') navigate(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+            }}
+            aria-label={out ? `${product.title} is out of stock` : `Add ${product.title} to cart (sign-in required)`}
           >
             <FiShoppingBag aria-hidden="true" /> {out ? 'Sold out' : 'Add'}
           </button>

@@ -89,4 +89,4 @@ VALUES
 
 -- Default store settings
 INSERT OR IGNORE INTO store_settings (id, store_name, support_email, currency_symbol, tax_rate, free_shipping_threshold, promo_message)
-VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.com', '₹', 0.10, 999, 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • 100% NON-ALCOHOLIC PURE PERFUME OILS');
+VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.com', '₹', 0, 999, 'COMPLIMENTARY EXPRESS SHIPPING ON ORDERS OVER ₹999 • 100% NON-ALCOHOLIC PURE PERFUME OILS');

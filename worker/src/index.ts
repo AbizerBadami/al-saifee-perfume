@@ -20,6 +20,7 @@ import orders from './routes/orders';
 import reviews from './routes/reviews';
 import settings from './routes/settings';
 import auth from './routes/auth';
+import customer from './routes/customer';
 import checkout from './routes/checkout';
 import tasks from './routes/tasks';
 
@@ -127,6 +128,7 @@ app.get('/', (c) => {
       reviews: '/api/reviews',
       settings: '/api/settings',
       auth: '/api/auth',
+      customer: '/api/customer',
       checkout: '/api/checkout',
       tasks: '/api/tasks',
     },
@@ -138,6 +140,7 @@ app.route('/api/orders', orders);
 app.route('/api/reviews', reviews);
 app.route('/api/settings', settings);
 app.route('/api/auth', auth);
+app.route('/api/customer', customer);
 app.route('/api/checkout', checkout);
 app.route('/api/tasks', tasks);
 
