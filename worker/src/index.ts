@@ -57,12 +57,18 @@ app.use(
       if (!origin) return '';
       const allowedOrigin = c.env.FRONTEND_URL?.replace(/\/+$/, '');
       const normalizedOrigin = origin.replace(/\/+$/, '');
+      // Allow production frontend
       if (allowedOrigin && normalizedOrigin === allowedOrigin) {
         return origin;
       }
-      // Allow local development origins only when running in dev/local mode
-      const isDev = !c.env.FRONTEND_URL || c.env.FRONTEND_URL.includes('localhost');
-      if (isDev && (normalizedOrigin === 'http://localhost:3000' || normalizedOrigin === 'http://localhost:5173')) {
+      // Allow local development origins (Vite / localhost)
+      if (
+        normalizedOrigin === 'http://localhost:3000' ||
+        normalizedOrigin === 'http://localhost:5173' ||
+        normalizedOrigin === 'http://localhost:4173' ||
+        normalizedOrigin === 'http://127.0.0.1:3000' ||
+        normalizedOrigin === 'http://127.0.0.1:5173'
+      ) {
         return origin;
       }
       return '';
