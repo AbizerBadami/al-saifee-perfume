@@ -1,0 +1,29 @@
+# ============================================================
+# Backend (Cloudflare Worker / Wrangler / D1) .gitignore
+# ============================================================
+
+# Dependencies
+node_modules/
+
+# Cloudflare Wrangler runtime state & local D1 SQLite databases
+.wrangler/
+**/.wrangler/
+
+# Cloudflare Worker secrets (never commit actual secrets)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Build output
+dist/
+build/
+
+# Logs & debugging
+*.log
+.mf/
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

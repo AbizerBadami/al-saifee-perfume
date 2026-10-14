@@ -5,281 +5,197 @@ import { useCart } from '../context/CartContext';
 import { checkoutAPI } from '../lib/api';
 import styles from './Checkout.module.css';
 
+const COUNTRIES = ['India', 'United Arab Emirates', 'Saudi Arabia', 'Kuwait', 'Qatar', 'Oman', 'United Kingdom', 'United States'];
+
 export const Checkout: React.FC = () => {
-  const { cart, subtotal, tax, shippingFee, total, clearCart } = useCart();
+  const { cart, subtotal, tax, taxRate, shippingFee, total, clearCart } = useCart();
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: 'India',
+  const [form, setForm] = useState({
+    fullName: '', email: '', phone: '',
+    addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: 'India',
   });
-
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [policy, setPolicy] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   if (cart.length === 0) {
     return (
-      <div className={styles.page} style={{ textAlign: 'center', paddingTop: '4rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-light)' }}>Your Shopping Cart is Empty</h2>
-        <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>Please select a fragrance before proceeding to checkout.</p>
-        <Link to="/shop" style={{ color: 'var(--gold-primary)', textDecoration: 'underline' }}>
-          Explore Collection
-        </Link>
+      <div className="container" style={{ padding: '4rem 1.25rem', textAlign: 'center' }}>
+        <p className="eyebrow">Checkout</p>
+        <h1>Your cart is empty</h1>
+        <p className="muted" style={{ margin: '0.75rem 0 1.5rem' }}>Add a fragrance before checking out.</p>
+        <Link to="/shop" className="btn btn-primary">Browse the collection</Link>
       </div>
     );
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const set = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleRazorpayPayment = async (e: React.FormEvent) => {
+  const pay = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsProcessing(true);
-
+    if (!policy) { setError('Please accept the returns policy to continue.'); return; }
+    if (cart.some((i) => i.product.stock <= 0)) { setError('One or more items in your cart is out of stock. Please remove it and try again.'); return; }
+    setBusy(true);
     try {
-      // Step 1: Create Razorpay order — sends cart items, NOT amount
-      const razorpayData = await checkoutAPI.createOrder(
-        cart,
-        'INR',
-        formData.fullName,
-        formData.email
-      );
-
-      // Step 2: Open Razorpay Checkout popup
+      const created = await checkoutAPI.createOrder(cart, 'INR', form.fullName.trim(), form.email.trim());
       const options = {
-        key: razorpayData.keyId,
-        amount: razorpayData.amount,
-        currency: razorpayData.currency,
+        key: created.keyId,
+        amount: created.amount,
+        currency: created.currency,
         name: 'Al-Saifee Perfumes',
-        description: 'Payment for your fragrance order',
-        order_id: razorpayData.orderId,
-        image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=200',
-        handler: async function (response: any) {
+        description: 'Fragrance order',
+        order_id: created.orderId,
+        prefill: { name: form.fullName, email: form.email, contact: form.phone },
+        notes: { address: `${form.addressLine1}, ${form.city} ${form.postalCode}` },
+        theme: { color: '#1c1b1a' },
+        modal: { ondismiss: () => setBusy(false) },
+        handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
-            // Step 3: Verify payment AND create order server-side
-            const result = await checkoutAPI.verify(
-              response.razorpay_order_id,
-              response.razorpay_payment_id,
-              response.razorpay_signature,
-              cart,
-              formData,
-              formData.fullName,
-              formData.email
-            );
-
+            const result = await checkoutAPI.verify({
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+              items: cart,
+              shippingAddress: form,
+              customerName: form.fullName.trim(),
+              customerEmail: form.email.trim(),
+            });
             if (result.verified && result.orderId) {
+              try {
+                sessionStorage.setItem('alsaifee_last_order', JSON.stringify({
+                  orderId: result.orderId,
+                  orderNumber: result.orderNumber || '',
+                  total: result.total ?? 0,
+                }));
+              } catch {}
               clearCart();
-              setIsProcessing(false);
-              navigate(`/success?orderId=${result.orderId}&orderNumber=${result.orderNumber}`);
+              const qs = new URLSearchParams({
+                orderId: result.orderId,
+                orderNumber: result.orderNumber || '',
+                total: String(result.total ?? 0),
+              });
+              navigate(`/success?${qs.toString()}`);
             } else {
-              setError(result.error || 'Payment verification failed. Please contact support.');
-              setIsProcessing(false);
+              setError(result.error || 'Payment verification failed. If money was deducted, contact support with your payment ID.');
+              setBusy(false);
             }
-          } catch (err: any) {
-            console.error('Verification error:', err);
-            setError('Payment verification error. If money was deducted, please contact support — your order will be fulfilled.');
-            setIsProcessing(false);
+          } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Verification failed. If money was deducted, contact support — your payment is recorded by Razorpay.');
+            setBusy(false);
           }
         },
-        prefill: {
-          name: formData.fullName,
-          email: formData.email,
-          contact: formData.phone,
-        },
-        notes: {
-          address: `${formData.addressLine1}, ${formData.city}`,
-        },
-        theme: { color: '#d4af37' },
-        modal: {
-          ondismiss: function () { setIsProcessing(false); },
-        },
       };
-
-      if (typeof (window as any).Razorpay !== 'undefined') {
-        const rzpInstance = new (window as any).Razorpay(options);
-        rzpInstance.open();
+      const Razorpay = (window as unknown as { Razorpay?: new (o: unknown) => { open: () => void } }).Razorpay;
+      if (Razorpay) {
+        new Razorpay(options).open();
       } else {
-        setError('Payment gateway is still loading. Please refresh the page and try again.');
-        setIsProcessing(false);
+        setError('Payment window failed to load. Please refresh and try again.');
+        setBusy(false);
       }
-    } catch (err: any) {
-      console.error('Checkout error:', err);
-      setError(err.message || 'Could not connect to payment gateway. Please try again.');
-      setIsProcessing(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not start payment. Please try again.');
+      setBusy(false);
     }
   };
 
   return (
     <div className={styles.page}>
-      <Link to="/shop" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1.5rem' }}>
-        <FiArrowLeft /> Return to Cart / Collection
-      </Link>
+      <div className="container">
+        <Link to="/shop" className={styles.back}><FiArrowLeft /> Continue shopping</Link>
+        <p className="eyebrow">Checkout</p>
+        <h1 className={styles.h1}>Shipping & payment</h1>
+        <p className={styles.sub}>No account needed · Secure Razorpay checkout (UPI, cards, netbanking)</p>
+        {error && <p className="alert alert-error" role="alert" style={{ marginBottom: '1.25rem' }}>{error}</p>}
 
-      <h1 className={styles.title}>Guest Acquisition Checkout</h1>
-      <p className={styles.subtitle}>No account creation required • 256-Bit Encrypted TLS Checkout</p>
-
-      {error && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem',
-          color: '#ef4444', fontSize: '0.85rem'
-        }}>
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleRazorpayPayment} className={styles.layout}>
-        <div className={styles.formSection}>
-          <div className={styles.formBlockTitle}>1. Contact Details</div>
-          <div className={styles.grid2}>
-            <input
-              type="text" name="fullName" placeholder="Full Name *"
-              value={formData.fullName} onChange={handleChange}
-              required minLength={2}
-            />
-            <input
-              type="email" name="email" placeholder="Email Address (for Tracking) *"
-              value={formData.email} onChange={handleChange}
-              required
-            />
-          </div>
-
-          <input
-            type="tel" name="phone" placeholder="Phone Number (for Courier Updates) *"
-            value={formData.phone} onChange={handleChange}
-            required pattern="[0-9]{10,15}" title="Enter a valid 10-15 digit phone number"
-          />
-
-          <div className={styles.formBlockTitle} style={{ marginTop: '1rem' }}>2. Shipping Address</div>
-          <input
-            type="text" name="addressLine1" placeholder="Street Address *"
-            value={formData.addressLine1} onChange={handleChange}
-            required minLength={5}
-          />
-
-          <input
-            type="text" name="addressLine2" placeholder="Apartment, suite, unit (optional)"
-            value={formData.addressLine2} onChange={handleChange}
-          />
-
-          <div className={styles.grid2}>
-            <input
-              type="text" name="city" placeholder="City *"
-              value={formData.city} onChange={handleChange}
-              required minLength={2}
-            />
-            <input
-              type="text" name="state" placeholder="State / Region *"
-              value={formData.state} onChange={handleChange}
-              required minLength={2}
-            />
-          </div>
-
-          <div className={styles.grid2}>
-            <input
-              type="text" name="postalCode" placeholder="PIN / Postal Code *"
-              value={formData.postalCode} onChange={handleChange}
-              required pattern="[0-9]{5,6}" title="Enter a valid 5-6 digit postal code"
-            />
-            <select name="country" value={formData.country} onChange={handleChange}>
-              <option value="India">India</option>
-              <option value="United Arab Emirates">United Arab Emirates</option>
-              <option value="Saudi Arabia">Saudi Arabia</option>
-              <option value="Kuwait">Kuwait</option>
-              <option value="Qatar">Qatar</option>
-              <option value="Oman">Oman</option>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="United States">United States</option>
-            </select>
-          </div>
-
-          <div className={styles.formBlockTitle} style={{ marginTop: '1rem' }}>3. Payment Gateway</div>
-          <div
-            style={{
-              background: 'rgba(255, 215, 0, 0.05)', border: '1px solid var(--gold-border)',
-              borderRadius: '8px', padding: '1.25rem', display: 'flex',
-              flexDirection: 'column', gap: '0.75rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700, color: 'var(--gold-light)' }}>
-                <input type="radio" name="paymentOption" checked readOnly style={{ accentColor: 'var(--gold-primary)' }} />
-                Razorpay Online Payment Gateway (UPI / Cards / NetBanking)
-              </div>
-              <FiLock style={{ color: 'var(--gold-primary)' }} />
-            </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, paddingLeft: '1.6rem' }}>
-              Secure checkout via official Razorpay Gateway API. Supports UPI (Google Pay, PhonePe, Paytm), Cards (Visa, Mastercard, RuPay), and NetBanking.
-            </p>
-          </div>
-
-          {/* Return Policy Acknowledgement */}
-          <label style={{
-            display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-            fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem',
-            cursor: 'pointer'
-          }}>
-            <input
-              type="checkbox" checked={policyAccepted}
-              onChange={(e) => setPolicyAccepted(e.target.checked)}
-              required
-              style={{ accentColor: 'var(--gold-primary)', marginTop: '3px', flexShrink: 0 }}
-            />
-            I acknowledge that opened or unsealed perfume oils and attars cannot be returned due to contamination and sanitary regulations. All sales of unsealed fragrance products are final.
-          </label>
-        </div>
-
-        {/* Order Summary Column */}
-        <div className={styles.summarySection}>
-          <h3 className={styles.summaryTitle}>Order Summary ({cart.length} Items)</h3>
-
-          <div className={styles.itemList}>
-            {cart.map((item, idx) => (
-              <div key={idx} className={styles.itemRow}>
+        <form onSubmit={pay} className={styles.layout}>
+          <div className={styles.form}>
+            <fieldset>
+              <legend>Contact</legend>
+              <div className={styles.grid2}>
                 <div>
-                  <strong>{item.product.title}</strong> x {item.quantity}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.selectedSize}</div>
+                  <label htmlFor="co-name">Full name *</label>
+                  <input id="co-name" name="fullName" value={form.fullName} onChange={set} required minLength={2} maxLength={120} autoComplete="name" />
                 </div>
-                <span>₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                <div>
+                  <label htmlFor="co-email">Email *</label>
+                  <input id="co-email" type="email" name="email" value={form.email} onChange={set} required maxLength={160} autoComplete="email" />
+                </div>
               </div>
-            ))}
+              <div>
+                <label htmlFor="co-phone">Phone *</label>
+                <input id="co-phone" type="tel" name="phone" value={form.phone} onChange={set} required pattern="[0-9+ -]{10,16}" title="10–16 digits" autoComplete="tel" inputMode="tel" />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Shipping address</legend>
+              <div>
+                <label htmlFor="co-a1">Street address *</label>
+                <input id="co-a1" name="addressLine1" value={form.addressLine1} onChange={set} required minLength={5} maxLength={200} autoComplete="street-address" />
+              </div>
+              <div>
+                <label htmlFor="co-a2">Apartment / landmark (optional)</label>
+                <input id="co-a2" name="addressLine2" value={form.addressLine2} onChange={set} maxLength={200} />
+              </div>
+              <div className={styles.grid2}>
+                <div>
+                  <label htmlFor="co-city">City *</label>
+                  <input id="co-city" name="city" value={form.city} onChange={set} required minLength={2} maxLength={80} autoComplete="address-level2" />
+                </div>
+                <div>
+                  <label htmlFor="co-state">State *</label>
+                  <input id="co-state" name="state" value={form.state} onChange={set} required minLength={2} maxLength={80} autoComplete="address-level1" />
+                </div>
+              </div>
+              <div className={styles.grid2}>
+                <div>
+                  <label htmlFor="co-pin">PIN / Postal code *</label>
+                  <input id="co-pin" name="postalCode" value={form.postalCode} onChange={set} required pattern="[0-9]{5,6}" title="5–6 digit PIN" inputMode="numeric" autoComplete="postal-code" />
+                </div>
+                <div>
+                  <label htmlFor="co-country">Country *</label>
+                  <select id="co-country" name="country" value={form.country} onChange={set}>
+                    {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Payment</legend>
+              <p className={styles.payBox}><FiLock aria-hidden="true" /> Razorpay — UPI, cards & netbanking. You&apos;ll confirm in a secure popup.</p>
+              <label className={styles.policy}>
+                <input type="checkbox" checked={policy} onChange={(e) => setPolicy(e.target.checked)} required />
+                I understand that opened or unsealed attars can&apos;t be returned for hygiene reasons.
+              </label>
+            </fieldset>
           </div>
 
-          <div className={styles.row}>
-            <span>Subtotal</span>
-            <span>₹{subtotal.toLocaleString('en-IN')}</span>
-          </div>
-
-          <div className={styles.row}>
-            <span>Estimated Tax</span>
-            <span>₹{tax.toLocaleString('en-IN')}</span>
-          </div>
-
-          <div className={styles.row}>
-            <span>Express Courier Shipping</span>
-            <span>{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toLocaleString('en-IN')}`}</span>
-          </div>
-
-          <div className={`${styles.row} ${styles.totalRow}`}>
-            <span>Grand Total</span>
-            <span>₹{total.toLocaleString('en-IN')}</span>
-          </div>
-
-          <button type="submit" className={styles.payBtn} disabled={isProcessing || !policyAccepted}>
-            <FiLock /> {isProcessing ? 'Opening Razorpay Gateway...' : `Pay via Razorpay — ₹${total.toLocaleString('en-IN')}`}
-          </button>
-        </div>
-      </form>
+          <aside className={styles.summary} aria-label="Order summary">
+            <h2>Order summary ({cart.reduce((n, i) => n + i.quantity, 0)} items)</h2>
+            <ul>
+              {cart.map((i) => (
+                <li key={`${i.product.id}-${i.selectedSize}`}>
+                  <span>{i.product.title} · {i.selectedSize} × {i.quantity}</span>
+                  <strong>₹{(i.price * i.quantity).toLocaleString('en-IN')}</strong>
+                </li>
+              ))}
+            </ul>
+            <dl>
+              <div><dt>Subtotal</dt><dd>₹{subtotal.toLocaleString('en-IN')}</dd></div>
+              <div><dt>Tax ({Math.round(taxRate * 100)}%)</dt><dd>₹{tax.toLocaleString('en-IN')}</dd></div>
+              <div><dt>Shipping</dt><dd>{shippingFee === 0 ? 'Free' : `₹${shippingFee}`}</dd></div>
+              <div className={styles.grand}><dt>Total</dt><dd>₹{total.toLocaleString('en-IN')}</dd></div>
+            </dl>
+            <button type="submit" className="btn btn-primary" disabled={busy || !policy} style={{ width: '100%' }}>
+              {busy ? 'Opening secure payment…' : `Pay ₹${total.toLocaleString('en-IN')}`}
+            </button>
+            {!policy && <p className={styles.hint}>Accept the returns note above to enable payment.</p>}
+          </aside>
+        </form>
+      </div>
     </div>
   );
 };

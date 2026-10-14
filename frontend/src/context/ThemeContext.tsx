@@ -1,93 +1,57 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ThemeName = 'obsidian' | 'emerald' | 'sapphire' | 'amethyst' | 'champagne';
-
-export interface ThemeOption {
-  id: ThemeName;
-  name: string;
-  bgHex: string;
-  accentHex: string;
-  previewGradient: string;
-}
-
-export const THEME_OPTIONS: ThemeOption[] = [
-  {
-    id: 'obsidian',
-    name: 'Obsidian & Gold',
-    bgHex: '#0a0a0a',
-    accentHex: '#d4af37',
-    previewGradient: 'linear-gradient(135deg, #0a0a0a 0%, #d4af37 100%)',
-  },
-  {
-    id: 'emerald',
-    name: 'Imperial Emerald & Gold',
-    bgHex: '#06120e',
-    accentHex: '#e5c158',
-    previewGradient: 'linear-gradient(135deg, #06120e 0%, #e5c158 100%)',
-  },
-  {
-    id: 'sapphire',
-    name: 'Midnight Sapphire & Amber',
-    bgHex: '#070e1b',
-    accentHex: '#eaa839',
-    previewGradient: 'linear-gradient(135deg, #070e1b 0%, #eaa839 100%)',
-  },
-  {
-    id: 'amethyst',
-    name: 'Velvet Amethyst & Rose Gold',
-    bgHex: '#120716',
-    accentHex: '#e5a8a8',
-    previewGradient: 'linear-gradient(135deg, #120716 0%, #e5a8a8 100%)',
-  },
-  {
-    id: 'champagne',
-    name: 'Champagne Silk & Bronze',
-    bgHex: '#faf7f2',
-    accentHex: '#a68028',
-    previewGradient: 'linear-gradient(135deg, #faf7f2 0%, #a68028 100%)',
-  },
-];
+export type ThemeName = 'light' | 'dark' | 'obsidian' | 'emerald' | 'sapphire' | 'amethyst' | 'champagne';
 
 interface ThemeContextType {
   theme: ThemeName;
   setTheme: (theme: ThemeName) => void;
-  currentOption: ThemeOption;
+  toggleTheme: () => void;
+  isDark: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeName>(() => {
-    try {
-      const saved = localStorage.getItem('alsaifee_theme');
-      return (saved as ThemeName) || 'obsidian';
-    } catch {
-      return 'obsidian';
-    }
-  });
+function getInitialTheme(): ThemeName {
+  try {
+    const saved = localStorage.getItem('alsaifee_theme') as ThemeName | null;
+    if (saved === 'dark' || saved === 'light') return saved;
+    // Migrate legacy themes: dark jewel tones -> dark, champagne -> light
+    if (saved === 'obsidian' || saved === 'emerald' || saved === 'sapphire' || saved === 'amethyst') return 'dark';
+    if (saved === 'champagne') return 'light';
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
+    return 'light';
+  } catch {
+    return 'light';
+  }
+}
 
-  const setTheme = (newTheme: ThemeName) => {
-    setThemeState(newTheme);
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setThemeState] = useState<ThemeName>(getInitialTheme);
+
+  const setTheme = (t: ThemeName) => {
+    const next: ThemeName = t === 'obsidian' || t === 'emerald' || t === 'sapphire' || t === 'amethyst' ? 'dark' : t === 'champagne' ? 'light' : t;
+    setThemeState(next);
     try {
-      localStorage.setItem('alsaifee_theme', newTheme);
-    } catch (e) {}
+      localStorage.setItem('alsaifee_theme', next);
+    } catch {}
   };
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
   }, [theme]);
 
-  const currentOption = THEME_OPTIONS.find((t) => t.id === theme) || THEME_OPTIONS[0];
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, currentOption }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, isDark: theme === 'dark' }}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within ThemeProvider');
-  return context;
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
 };

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // ============================================================
 // Orders API Routes
 // Hardened with:
@@ -11,6 +12,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+=======
+// Orders API Routes — paginated, validated, no client-trusted totals
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+>>>>>>> 03fb960 (rebuild)
 import type { Bindings, OrderRow, OrderItemRow } from '../types';
 import { toOrderJSON, toPublicOrderJSON } from '../types';
 import { authGuard } from '../middleware/auth';
@@ -18,6 +25,7 @@ import { rateLimiter } from '../middleware/rateLimiter';
 
 const orders = new Hono<{ Bindings: Bindings }>();
 
+<<<<<<< HEAD
 // ---------- Validation Schemas ----------
 
 const orderStatusUpdateSchema = z.object({
@@ -57,54 +65,104 @@ orders.get('/', authGuard, async (c) => {
   const { results: orderRows } = await c.env.DB.prepare(
     'SELECT * FROM orders ORDER BY created_at DESC'
   ).all<OrderRow>();
+=======
+const STATUSES = ['Processing', 'Shipped', 'Delivered', 'Cancelled'] as const;
+const PAYMENT_STATUSES = ['Paid', 'Pending', 'Failed'] as const;
+>>>>>>> 03fb960 (rebuild)
 
-  const ordersWithItems = await Promise.all(
-    orderRows.map(async (order) => {
-      const { results: items } = await c.env.DB.prepare(
-        'SELECT * FROM order_items WHERE order_id = ?'
-      ).bind(order.id).all<OrderItemRow>();
-      return toOrderJSON(order, items);
-    })
-  );
-
-  return c.json({ orders: ordersWithItems, total: ordersWithItems.length, status: 'success' });
+const statusPatchSchema = z.object({
+  status: z.enum(STATUSES).optional(),
+  trackingNumber: z.string().trim().max(120).nullable().optional(),
+  paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
 });
 
+<<<<<<< HEAD
 // GET /api/orders/lookup — Lookup by order number + email (public, throttled, sanitized PII)
 orders.get('/lookup', rateLimiter(10, 60), async (c) => {
   const orderNumber = c.req.query('orderNumber')?.trim();
   const email = c.req.query('email')?.trim();
+=======
+// GET /api/orders — admin only, paginated
+orders.get('/', authGuard, async (c) => {
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50', 10) || 50));
+  const offset = Math.max(0, parseInt(c.req.query('offset') || '0', 10) || 0);
+  const countRow = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM orders').first<{ cnt: number }>();
+  const { results: orderRows } = await c.env.DB.prepare(
+    'SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?'
+  ).bind(limit, offset).all<OrderRow>();
+
+  if (orderRows.length === 0) return c.json({ orders: [], total: countRow?.cnt ?? 0, limit, offset });
+
+  const ids = orderRows.map((o) => o.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const { results: allItems } = await c.env.DB.prepare(
+    `SELECT * FROM order_items WHERE order_id IN (${placeholders})`
+  ).bind(...ids).all<OrderItemRow>();
+  const byOrder = new Map<string, OrderItemRow[]>();
+  for (const it of allItems) {
+    const arr = byOrder.get(it.order_id) || [];
+    arr.push(it);
+    byOrder.set(it.order_id, arr);
+  }
+
+  return c.json({
+    orders: orderRows.map((o) => toOrderJSON(o, byOrder.get(o.id) || [])),
+    total: countRow?.cnt ?? orderRows.length,
+    limit,
+    offset,
+  });
+});
+
+// GET /api/orders/lookup — public tracking, requires both fields (rate-limited: PII-adjacent)
+orders.get('/lookup', rateLimiter(30, 600), async (c) => {
+  const orderNumber = (c.req.query('orderNumber') || '').trim().slice(0, 64);
+  const email = (c.req.query('email') || '').trim().toLowerCase().slice(0, 255);
+>>>>>>> 03fb960 (rebuild)
 
   if (!orderNumber || !email) {
-    return c.json({ error: 'Both orderNumber and email are required' }, 400);
+    return c.json({ error: 'Both orderNumber and email are required', code: 'BAD_REQUEST' }, 400);
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return c.json({ error: 'Valid email is required', code: 'BAD_REQUEST' }, 400);
   }
 
   const order = await c.env.DB.prepare(
+<<<<<<< HEAD
     'SELECT * FROM orders WHERE order_number = ? AND LOWER(customer_email) = LOWER(?)'
+=======
+    'SELECT * FROM orders WHERE order_number = ? AND lower(customer_email) = ?'
+>>>>>>> 03fb960 (rebuild)
   ).bind(orderNumber, email).first<OrderRow>();
 
-  if (!order) return c.json({ error: 'Order not found' }, 404);
+  if (!order) return c.json({ error: 'Order not found', code: 'NOT_FOUND' }, 404);
 
   const { results: items } = await c.env.DB.prepare(
     'SELECT * FROM order_items WHERE order_id = ?'
   ).bind(order.id).all<OrderItemRow>();
 
+<<<<<<< HEAD
   return c.json(toPublicOrderJSON(order, items));
+=======
+  return c.json({ order: toOrderJSON(order, items) });
+>>>>>>> 03fb960 (rebuild)
 });
 
-// GET /api/orders/:id — Single order (admin only)
+// GET /api/orders/:id — admin only (supports id or order_number)
 orders.get('/:id', authGuard, async (c) => {
-  const id = c.req.param('id');
-  const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first<OrderRow>();
-  if (!order) return c.json({ error: 'Order not found' }, 404);
+  const id = c.req.param('id').slice(0, 128);
+  const order = await c.env.DB.prepare(
+    'SELECT * FROM orders WHERE id = ? OR order_number = ?'
+  ).bind(id, id).first<OrderRow>();
+  if (!order) return c.json({ error: 'Order not found', code: 'NOT_FOUND' }, 404);
 
   const { results: items } = await c.env.DB.prepare(
     'SELECT * FROM order_items WHERE order_id = ?'
   ).bind(order.id).all<OrderItemRow>();
 
-  return c.json(toOrderJSON(order, items));
+  return c.json({ order: toOrderJSON(order, items) });
 });
 
+<<<<<<< HEAD
 // POST /api/orders — Create a new order (admin only)
 orders.post('/', authGuard, zValidator('json', orderCreateSchema), async (c) => {
   const body = c.req.valid('json');
@@ -169,29 +227,28 @@ orders.patch('/:id/status', authGuard, zValidator('json', orderStatusUpdateSchem
 
   const existing = await c.env.DB.prepare('SELECT id FROM orders WHERE id = ?').bind(id).first();
   if (!existing) return c.json({ error: 'Order not found' }, 404);
+=======
+// PATCH /api/orders/:id/status — admin only, whitelisted fields
+orders.patch('/:id/status', authGuard, zValidator('json', statusPatchSchema), async (c) => {
+  const id = c.req.param('id').slice(0, 128);
+  const body = c.req.valid('json');
+
+  const existing = await c.env.DB.prepare('SELECT id FROM orders WHERE id = ? OR order_number = ?').bind(id, id).first<{ id: string }>();
+  if (!existing) return c.json({ error: 'Order not found', code: 'NOT_FOUND' }, 404);
+>>>>>>> 03fb960 (rebuild)
 
   const sets: string[] = [];
   const values: unknown[] = [];
+  if (body.status) { sets.push('status = ?'); values.push(body.status); }
+  if (body.trackingNumber !== undefined) { sets.push('tracking_number = ?'); values.push(body.trackingNumber); }
+  if (body.paymentStatus) { sets.push('payment_status = ?'); values.push(body.paymentStatus); }
+  if (sets.length === 0) return c.json({ error: 'Nothing to update', code: 'BAD_REQUEST' }, 400);
 
-  if (body.status) {
-    sets.push('status = ?');
-    values.push(body.status);
-  }
-  if (body.trackingNumber !== undefined) {
-    sets.push('tracking_number = ?');
-    values.push(body.trackingNumber);
-  }
-  if (body.paymentStatus) {
-    sets.push('payment_status = ?');
-    values.push(body.paymentStatus);
-  }
-
-  if (sets.length === 0) return c.json({ error: 'Nothing to update' }, 400);
-
-  values.push(id);
+  sets.push("updated_at = datetime('now')");
+  values.push(existing.id);
   await c.env.DB.prepare(`UPDATE orders SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
 
-  return c.json({ id, status: 'success', message: 'Order updated' });
+  return c.json({ id: existing.id, status: 'success' });
 });
 
 export default orders;

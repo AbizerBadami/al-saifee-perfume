@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FiDollarSign,
@@ -18,7 +18,8 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
-import { Product, Order } from '../types';
+import { ordersAPI, reviewsAPI } from '../lib/api';
+import { Product, Order, Review } from '../types';
 import styles from './AdminDashboard.module.css';
 
 const SAMPLE_PHOTOS = [
@@ -34,26 +35,82 @@ export const AdminDashboard: React.FC = () => {
   const { logout, isAdmin } = useAuth();
   const {
     products,
-    orders,
     reviews,
     settings,
     saveProduct,
     deleteProduct,
-    updateOrderStatus,
     moderateReview,
     updateSettings,
   } = useStore();
 
   const navigate = useNavigate();
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const pendingOrdersCount = orders.filter((o) => o.status === 'Processing').length;
+  // Admin orders: fetched server-side (StoreContext never holds orders —
+  // orders live only in D1 and are created via Razorpay verify).
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState('');
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    setOrdersError('');
+    try {
+      const res = await ordersAPI.list(100, 0);
+      setAdminOrders(res.orders || []);
+    } catch (err) {
+      setOrdersError(err instanceof Error ? err.message : 'Could not load orders.');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (isAdmin) fetchOrders();
+  }, [isAdmin]);
+
+  const handleOrderStatus = async (orderId: string, status: Order['status']) => {
+    try {
+      await ordersAPI.updateStatus(orderId, { status });
+      setAdminOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+    } catch (err) {
+      setOrdersError(err instanceof Error ? err.message : 'Could not update order.');
+    }
+  };
+
+  // Admin moderation queue: Pending + Approved with private fields (email, order).
+  // Public StoreContext reviews are Approved-only without PII, so fetch separately.
+  const [adminReviews, setAdminReviews] = useState<Review[]>([]);
+  const [adminReviewsError, setAdminReviewsError] = useState('');
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [pending, approved] = await Promise.all([
+          reviewsAPI.adminList('Pending'),
+          reviewsAPI.adminList('Approved'),
+        ]);
+        if (!cancelled) {
+          const merged = [...pending.reviews, ...approved.reviews].sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt)
+          );
+          setAdminReviews(merged);
+          setAdminReviewsError('');
+        }
+      } catch (err) {
+        if (!cancelled) setAdminReviewsError(err instanceof Error ? err.message : 'Could not load reviews.');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isAdmin, reviews.length]);
+
+  const totalRevenue = adminOrders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total, 0);
+  const pendingOrdersCount = adminOrders.filter((o) => o.status === 'Processing').length;
 
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProduct.title) {
       saveProduct(editingProduct as Product);
       setProductModalOpen(false);
+      setImageError('');
     }
   };
 
@@ -80,31 +137,81 @@ export const AdminDashboard: React.FC = () => {
     isFeatured: true,
   });
 
+  const [imageError, setImageError] = useState('');
+
+  // Bounded uploads: type + 2MB + 6-image cap, resized to max 1200px JPEG.
+  // Raw data-URLs exceed the API's 2000-char URL limit and bloat D1, so every
+  // file is downscaled client-side before it enters the gallery.
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    setImageError('');
+
+    const current = editingProduct.images || [];
+    if (current.length + files.length > 6) {
+      setImageError(`Gallery holds max 6 photos (you have ${current.length}). Remove one first.`);
+      e.target.value = '';
+      return;
+    }
 
     Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const result = uploadEvent.target?.result as string;
-        if (result) {
+      if (!file.type.startsWith('image/')) {
+        setImageError(`"${file.name}" is not an image file.`);
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setImageError(`"${file.name}" exceeds 2MB. Compress it or paste an image URL instead.`);
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxSide = 1200;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const resized = canvas.toDataURL('image/jpeg', 0.8);
           setEditingProduct((prev) => ({
             ...prev,
-            images: [...(prev.images || []), result]
+            images: [...(prev.images || []), resized].slice(0, 6),
           }));
+        } catch {
+          setImageError('Could not process that image. Try an image URL instead.');
+        } finally {
+          URL.revokeObjectURL(url);
         }
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        setImageError(`"${file.name}" could not be read as an image.`);
+      };
+      img.src = url;
     });
     e.target.value = '';
   };
 
   const handleAddImageUrl = () => {
-    if (!imageUrlInput.trim()) return;
+    const url = imageUrlInput.trim();
+    if (!url) return;
+    setImageError('');
+    if (!/^https?:\/\/.+\..+/.test(url)) {
+      setImageError('Enter a full http(s) image URL.');
+      return;
+    }
+    if (url.length > 2000) {
+      setImageError('That URL exceeds 2000 characters.');
+      return;
+    }
+    if ((editingProduct.images || []).length >= 6) {
+      setImageError('Gallery holds max 6 photos. Remove one first.');
+      return;
+    }
     setEditingProduct((prev) => ({
       ...prev,
-      images: [...(prev.images || []), imageUrlInput.trim()]
+      images: [...(prev.images || []), url].slice(0, 6),
     }));
     setImageUrlInput('');
   };
@@ -147,7 +254,7 @@ export const AdminDashboard: React.FC = () => {
         <div className={styles.statCard}>
           <div className={styles.statIcon}><FiShoppingBag /></div>
           <div>
-            <div className={styles.statValue}>{orders.length}</div>
+            <div className={styles.statValue}>{adminOrders.length}</div>
             <div className={styles.statLabel}>Total Orders ({pendingOrdersCount} Pending)</div>
           </div>
         </div>
@@ -164,22 +271,36 @@ export const AdminDashboard: React.FC = () => {
       {/* Tab Controls */}
       <div className={styles.tabs}>
         <button className={`${styles.tabBtn} ${activeTab === 'orders' ? styles.activeTab : ''}`} onClick={() => setActiveTab('orders')}>
-          Acquisition Orders ({orders.length})
+          Acquisition Orders ({adminOrders.length})
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.activeTab : ''}`} onClick={() => setActiveTab('products')}>
           Catalog Products ({products.length})
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'reviews' ? styles.activeTab : ''}`} onClick={() => setActiveTab('reviews')}>
-          Reviews Moderation ({reviews.length})
+          Reviews Moderation ({adminReviews.length || reviews.length})
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.activeTab : ''}`} onClick={() => setActiveTab('settings')}>
           Store Config
         </button>
       </div>
 
-      {/* Orders Tab */}
+      {/* Orders Tab — server-side list with loading/error/empty states */}
       {activeTab === 'orders' && (
         <div className={styles.contentCard}>
+          {ordersLoading && <p className="muted">Loading orders…</p>}
+          {ordersError && (
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <p className="alert alert-error" role="alert">{ordersError}</p>
+              <button type="button" className="btn btn-secondary" onClick={fetchOrders}>Retry</button>
+            </div>
+          )}
+          {!ordersLoading && !ordersError && adminOrders.length === 0 && (
+            <div className="empty">
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem' }}>No orders yet</h3>
+              <p>New paid orders will appear here automatically.</p>
+            </div>
+          )}
+          {!ordersLoading && !ordersError && adminOrders.length > 0 && (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
@@ -193,7 +314,7 @@ export const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {adminOrders.map((order) => (
                   <tr key={order.id}>
                     <td><strong>{order.orderNumber}</strong></td>
                     <td>
@@ -205,8 +326,9 @@ export const AdminDashboard: React.FC = () => {
                     <td>
                       <select
                         value={order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value as Order['status'])}
-                        style={{ background: '#111', color: 'var(--gold-light)', padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--gold-border)' }}
+                        onChange={(e) => handleOrderStatus(order.id, e.target.value as Order['status'])}
+                        aria-label={`Status for order ${order.orderNumber}`}
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '0.45rem 0.6rem', borderRadius: '8px', border: '1px solid var(--line-strong)', minHeight: '40px' }}
                       >
                         <option value="Processing">Processing</option>
                         <option value="Shipped">Shipped</option>
@@ -224,6 +346,7 @@ export const AdminDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
@@ -253,7 +376,7 @@ export const AdminDashboard: React.FC = () => {
                 });
                 setProductModalOpen(true);
               }}
-              style={{ background: 'var(--gold-gradient)', color: '#000', fontWeight: 700, padding: '0.5rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
+              style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: 700, padding: '0.65rem 1.1rem', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', minHeight: '44px' }}
             >
               <FiPlus /> Add Fragrance
             </button>
@@ -304,15 +427,20 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Reviews Moderation Tab */}
+      {/* Reviews Moderation Tab — admin-only queue with verified-purchase context */}
       {activeTab === 'reviews' && (
         <div className={styles.contentCard}>
-          <h3>Client Testimonial Moderation</h3>
+          <h3>Verified Review Moderation</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Only paid, non-cancelled orders containing the product can submit. Public list shows Approved only, without emails.
+          </p>
+          {adminReviewsError && <p className="alert alert-error" role="alert" style={{ marginTop: '1rem' }}>{adminReviewsError}</p>}
           <div className={styles.tableWrapper} style={{ marginTop: '1rem' }}>
             <table className={styles.table}>
               <thead>
                 <tr>
                   <th>User</th>
+                  <th>Order</th>
                   <th>Rating</th>
                   <th>Comment</th>
                   <th>Status</th>
@@ -320,17 +448,24 @@ export const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {reviews.map((r) => (
+                {(adminReviews.length ? adminReviews : reviews).map((r) => (
                   <tr key={r.id}>
-                    <td>{r.userName}</td>
+                    <td>{r.userName}{r.userEmail ? <><br /><span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{r.userEmail}</span></> : null}</td>
+                    <td>{r.orderNumber || '—'}{r.verifiedPurchase ? <><br /><span style={{ color: 'var(--success)', fontSize: '0.75rem', fontWeight: 700 }}>✓ Verified</span></> : null}</td>
                     <td>{r.rating} / 5</td>
                     <td>{r.comment}</td>
                     <td>{r.status}</td>
                     <td>
                       {r.status === 'Pending' && (
-                        <button className={styles.actionBtn} onClick={() => moderateReview(r.id, 'Approved')}>Approve</button>
+                        <button className={styles.actionBtn} onClick={async () => {
+                          await moderateReview(r.id, 'Approved');
+                          setAdminReviews((prev) => prev.map((x) => (x.id === r.id ? { ...x, status: 'Approved' as const } : x)));
+                        }}>Approve</button>
                       )}
-                      <button className={styles.actionBtn} style={{ borderColor: '#ef4444', color: '#ef4444' }} onClick={() => moderateReview(r.id, 'Rejected')}>
+                      <button className={styles.actionBtn} style={{ borderColor: '#ef4444', color: '#ef4444' }} onClick={async () => {
+                        await moderateReview(r.id, 'Rejected');
+                        setAdminReviews((prev) => prev.map((x) => (x.id === r.id ? { ...x, status: 'Rejected' as const } : x)));
+                      }}>
                         Reject
                       </button>
                     </td>
@@ -586,6 +721,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Upload File & Add URL Controls */}
+                {imageError && <p className="alert alert-error" role="alert" style={{ marginBottom: '0.75rem' }}>{imageError}</p>}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', alignItems: 'center' }}>
                   {/* File Upload Button */}
                   <label

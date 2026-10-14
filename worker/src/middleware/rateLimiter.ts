@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // ============================================================
 // Rate Limiter Middleware for Cloudflare Workers
 // Primary: Uses Cloudflare native Rate Limiting binding (c.env.RATE_LIMITER)
@@ -5,13 +6,22 @@
 // ============================================================
 
 import { Context, Next } from 'hono';
+=======
+// Simple in-memory token-bucket rate limiter for a single Worker isolate.
+// NOTE: Workers run on many isolates, so this is best-effort only.
+// Production MUST also enable Cloudflare Rate Limiting rules / Turnstile on
+// /api/auth/*, /api/checkout/* and /api/reviews (see DEPLOYMENT.md).
+>>>>>>> 03fb960 (rebuild)
 import { createMiddleware } from 'hono/factory';
 import type { Bindings, Variables } from '../types';
 
 // In-memory sliding window fallback
 const memoryBuckets = new Map<string, number[]>();
 
+const buckets = new Map<string, { count: number; reset: number }>();
+
 export const rateLimiter = (limit: number, windowSeconds: number) => {
+<<<<<<< HEAD
   return createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
     const ip =
       c.req.header('cf-connecting-ip') ||
@@ -71,6 +81,22 @@ export const rateLimiter = (limit: number, windowSeconds: number) => {
       }
     }
 
+=======
+  return createMiddleware(async (c, next) => {
+    const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown';
+    const key = `${c.req.path}:${ip}`;
+    const now = Date.now();
+    const entry = buckets.get(key);
+    if (!entry || now > entry.reset) {
+      buckets.set(key, { count: 1, reset: now + windowSeconds * 1000 });
+      await next();
+      return;
+    }
+    entry.count += 1;
+    if (entry.count > limit) {
+      return c.json({ error: 'Too many requests. Please slow down.', code: 'RATE_LIMITED' }, 429);
+    }
+>>>>>>> 03fb960 (rebuild)
     await next();
   });
 };

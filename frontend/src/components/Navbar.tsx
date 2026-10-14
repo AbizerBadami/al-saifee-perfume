@@ -1,145 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { FiShoppingBag, FiHeart, FiSearch, FiMenu, FiX } from 'react-icons/fi';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { FiShoppingBag, FiHeart, FiSearch, FiMenu, FiX, FiMoon, FiSun } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { useTheme } from '../context/ThemeContext';
 import styles from './Navbar.module.css';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { itemCount, openCart } = useCart();
   const { wishlist, settings } = useStore();
+  const { isDark, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [location]);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMobileMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate(query.trim() ? `/shop?q=${encodeURIComponent(query.trim())}` : '/shop');
+    setIsMobileMenuOpen(false);
+  };
+
+  const linkCls = ({ isActive }: { isActive: boolean }) => (isActive ? `${styles.navLink} ${styles.active}` : styles.navLink);
 
   return (
     <>
-      <div className={styles.banner}>
-        {settings.promoMessage}
-      </div>
-
+      {settings.promoMessage ? <div className={styles.banner} role="note">{settings.promoMessage}</div> : null}
       <header className={styles.header}>
         <div className={styles.container}>
-          <Link to="/" className={styles.logoArea}>
-            <div>
-              <div className={styles.logoText}>AL-SAIFEE PERFUMES</div>
-              <div className={styles.logoSub}>Haute Parfumerie & Wild Aged Oud</div>
-            </div>
+          <Link to="/" className={styles.brand} aria-label="Al-Saifee Perfumes home">
+            <span className={styles.mark} aria-hidden="true">A</span>
+            <span className={styles.brandText}>
+              <span className={styles.brandName}>Al-Saifee</span>
+              <span className={styles.brandSub}>Perfumes · Attar & Oud</span>
+            </span>
           </Link>
 
-          <nav>
-            <ul className={styles.navLinks}>
-              <li>
-                <Link to="/" className={`${styles.navLink} ${location.pathname === '/' ? styles.activeLink : ''}`}>
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop" className={`${styles.navLink} ${location.pathname === '/shop' ? styles.activeLink : ''}`}>
-                  Collection
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=Pure%20Attars" className={`${styles.navLink} ${location.search.includes('Attars') ? styles.activeLink : ''}`}>
-                  Pure Attars
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop?category=Oud%20Specials" className={`${styles.navLink} ${location.search.includes('Oud') ? styles.activeLink : ''}`}>
-                  Oud Specials
-                </Link>
-              </li>
-              <li>
-                <Link to="/tracking" className={`${styles.navLink} ${location.pathname === '/tracking' ? styles.activeLink : ''}`}>
-                  Track Order
-                </Link>
-              </li>
-            </ul>
+          <nav aria-label="Primary" className={styles.desktopNav}>
+            <NavLink to="/" end className={linkCls}>Home</NavLink>
+            <NavLink to="/shop" end className={linkCls}>Shop all</NavLink>
+            <NavLink to="/shop?category=Pure%20Attars" className={linkCls}>Pure Attars</NavLink>
+            <NavLink to="/shop?category=Oud%20Specials" className={linkCls}>Oud</NavLink>
+            <NavLink to="/tracking" className={linkCls}>Track order</NavLink>
           </nav>
 
           <div className={styles.actions}>
-            <Link to="/shop" className={styles.iconBtn} title="Search fragrances">
-              <FiSearch />
+            <form className={styles.search} onSubmit={submitSearch} role="search">
+              <FiSearch aria-hidden="true" />
+              <label htmlFor="site-search" className="sr-only">Search fragrances</label>
+              <input
+                id="site-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search rose, oud, vanilla…"
+                autoComplete="off"
+              />
+            </form>
+            <Link to="/wishlist" className={styles.iconBtn} aria-label={`Wishlist, ${wishlist.length} items`}>
+              <FiHeart aria-hidden="true" />
+              {wishlist.length > 0 && <span className={styles.badge} aria-hidden="true">{wishlist.length}</span>}
             </Link>
-
-            <Link to="/wishlist" className={styles.iconBtn} title="Saved Wishlist">
-              <FiHeart />
-              {wishlist.length > 0 && <span className={styles.badge}>{wishlist.length}</span>}
-            </Link>
-
-            <button className={styles.iconBtn} onClick={openCart} title="Shopping Cart">
-              <FiShoppingBag />
-              {itemCount > 0 && <span className={styles.badge}>{itemCount}</span>}
+            <button className={styles.iconBtn} onClick={openCart} aria-label={`Open cart, ${itemCount} items`}>
+              <FiShoppingBag aria-hidden="true" />
+              {itemCount > 0 && <span className={styles.badge} aria-hidden="true" aria-live="polite">{itemCount}</span>}
             </button>
-
+            <button className={styles.iconBtn} onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {isDark ? <FiSun aria-hidden="true" /> : <FiMoon aria-hidden="true" />}
+            </button>
             <button
-              className={styles.mobileMenuToggle}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle Navigation Menu"
+              className={styles.menuBtn}
+              onClick={() => setIsMobileMenuOpen((v) => !v)}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-nav"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
-              {isMobileMenuOpen ? <FiX /> : <FiMenu />}
+              {isMobileMenuOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className={styles.mobileDrawer}>
-            <ul className={styles.mobileNavLinks}>
-              <li>
-                <Link
-                  to="/"
-                  className={`${styles.mobileNavLink} ${location.pathname === '/' ? styles.activeMobileLink : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/shop"
-                  className={`${styles.mobileNavLink} ${location.pathname === '/shop' ? styles.activeMobileLink : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Collection
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/shop?category=Pure%20Attars"
-                  className={`${styles.mobileNavLink} ${location.search.includes('Attars') ? styles.activeMobileLink : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Pure Attars
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/shop?category=Oud%20Specials"
-                  className={`${styles.mobileNavLink} ${location.search.includes('Oud') ? styles.activeMobileLink : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Oud Specials
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/tracking"
-                  className={`${styles.mobileNavLink} ${location.pathname === '/tracking' ? styles.activeMobileLink : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Track Order
-                </Link>
-              </li>
-            </ul>
+          <div className={styles.mobileWrap}>
+            <div className={styles.scrim} onClick={() => setIsMobileMenuOpen(false)} aria-hidden="true" />
+            <nav id="mobile-nav" aria-label="Mobile" className={styles.mobileNav}>
+              <form className={styles.mobileSearch} onSubmit={submitSearch} role="search">
+                <label htmlFor="mobile-search" className="sr-only">Search fragrances</label>
+                <input id="mobile-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search fragrances…" />
+                <button type="submit" className="btn btn-primary">Search</button>
+              </form>
+              <Link to="/" className={styles.mobileLink}>Home</Link>
+              <Link to="/shop" className={styles.mobileLink}>Shop all</Link>
+              <Link to="/shop?category=Pure%20Attars" className={styles.mobileLink}>Pure Attars</Link>
+              <Link to="/shop?category=Oud%20Specials" className={styles.mobileLink}>Oud Specials</Link>
+              <Link to="/shop?category=Perfumes" className={styles.mobileLink}>Perfumes</Link>
+              <Link to="/tracking" className={styles.mobileLink}>Track order</Link>
+              <Link to="/wishlist" className={styles.mobileLink}>Wishlist</Link>
+            </nav>
           </div>
         )}
       </header>
     </>
   );
 };
-

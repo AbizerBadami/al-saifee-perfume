@@ -47,13 +47,20 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface OrderItem {
+  product: { id: string; title: string };
+  selectedSize: string;
+  quantity: number;
+  price: number;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
   customerName: string;
   customerEmail: string;
   shippingAddress: ShippingAddress;
-  items: CartItem[];
+  items: OrderItem[];
   subtotal: number;
   tax: number;
   shippingFee: number;
@@ -61,7 +68,7 @@ export interface Order {
   status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
   paymentStatus: 'Paid' | 'Pending' | 'Failed';
   paymentMethod: string;
-  trackingNumber?: string;
+  trackingNumber?: string | null;
   createdAt: string;
 }
 
@@ -69,10 +76,12 @@ export interface Review {
   id: string;
   productId: string;
   userName: string;
-  userEmail: string;
+  userEmail?: string;
   rating: number;
   comment: string;
   status: 'Approved' | 'Pending' | 'Rejected';
+  orderNumber?: string;
+  verifiedPurchase?: boolean;
   createdAt: string;
 }
 

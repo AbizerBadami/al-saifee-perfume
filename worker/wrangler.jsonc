@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
 	"name": "al-saifee-api",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-01-01",
@@ -33,3 +34,37 @@
 		}
 	]
 }
+=======
+  "name": "al-saifee-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "al-saifee-db",
+      "database_id": "f10cb652-2469-448f-8181-9a551d66209a"
+    }
+  ],
+  "vars": {
+    "FRONTEND_URL": "http://localhost:3000",
+    "JWT_EXPIRES_IN": "86400"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Secrets (set via `wrangler secret put <KEY>`):
+  //   - JWT_SECRET (min 32 random bytes)
+  //   - RAZORPAY_KEY_ID
+  //   - RAZORPAY_KEY_SECRET
+  // Production: set FRONTEND_URL via `wrangler deploy --var FRONTEND_URL:https://alsaifeeperfumes.com`
+  // or [env.production] vars below.
+  // "env": {
+  //   "production": {
+  //     "vars": { "FRONTEND_URL": "https://alsaifeeperfumes.com" }
+  //   }
+  // }
+}
+>>>>>>> 03fb960 (rebuild)

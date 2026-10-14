@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiSearch, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiX } from 'react-icons/fi';
 import { ProductCard } from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
 import styles from './Shop.module.css';
@@ -12,174 +12,162 @@ export const Shop: React.FC = () => {
   const { products } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialCat = searchParams.get('category') || '';
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCat ? [initialCat] : []);
+  const urlCat = searchParams.get('category') || '';
+  const urlQ = searchParams.get('q') || '';
+  const urlSort = searchParams.get('sort') || 'featured';
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(urlCat ? [urlCat] : []);
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<string>('featured');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchQuery, setSearchQuery] = useState(urlQ);
+  const [sortBy, setSortBy] = useState(urlSort);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
-  const itemsPerPage = 6;
+  useEffect(() => {
+    setSelectedCategories(urlCat ? [urlCat] : []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCat]);
+  useEffect(() => { setSearchQuery(urlQ); setCurrentPage(1); }, [urlQ]);
+  useEffect(() => { setSortBy(urlSort); }, [urlSort]);
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
+  const itemsPerPage = 12;
+
+  const toggle = (list: string[], v: string, set: (x: string[]) => void) => {
+    set(list.includes(v) ? list.filter((c) => c !== v) : [...list, v]);
     setCurrentPage(1);
   };
 
-  const toggleFamily = (fam: string) => {
-    setSelectedFamilies((prev) =>
-      prev.includes(fam) ? prev.filter((f) => f !== fam) : [...prev, fam]
-    );
-    setCurrentPage(1);
-  };
-
-  // Filter & Sort logic
-  const filteredProducts = useMemo(() => {
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return products
       .filter((p) => {
-        if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) return false;
-        if (selectedFamilies.length > 0 && !selectedFamilies.includes(p.fragranceFamily)) return false;
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          const matchTitle = p.title.toLowerCase().includes(q);
-          const matchNotes =
-            p.topNotes.some((n) => n.toLowerCase().includes(q)) ||
-            p.middleNotes.some((n) => n.toLowerCase().includes(q)) ||
-            p.baseNotes.some((n) => n.toLowerCase().includes(q));
-          if (!matchTitle && !matchNotes) return false;
+        if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
+        if (selectedFamilies.length && !selectedFamilies.includes(p.fragranceFamily)) return false;
+        if (inStockOnly && p.stock <= 0) return false;
+        if (q) {
+          const hay = [p.title, p.subtitle, p.description, p.category, p.fragranceFamily, ...p.topNotes, ...p.middleNotes, ...p.baseNotes]
+            .join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
         }
         return true;
       })
       .sort((a, b) => {
-        const priceA = a.salePrice || a.price;
-        const priceB = b.salePrice || b.price;
-        if (sortBy === 'price-low') return priceA - priceB;
-        if (sortBy === 'price-high') return priceB - priceA;
+        const pa = a.salePrice && a.salePrice > 0 ? a.salePrice : a.price;
+        const pb = b.salePrice && b.salePrice > 0 ? b.salePrice : b.price;
+        if (sortBy === 'price-low') return pa - pb;
+        if (sortBy === 'price-high') return pb - pa;
         if (sortBy === 'rating') return b.rating - a.rating;
-        return 0; // featured/default
+        return 0;
       });
-  }, [products, selectedCategories, selectedFamilies, searchQuery, sortBy]);
+  }, [products, selectedCategories, selectedFamilies, searchQuery, sortBy, inStockOnly]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(start, start + itemsPerPage);
-  }, [filteredProducts, currentPage]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const page = Math.min(currentPage, totalPages);
+  const visible = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const activeCount = selectedCategories.length + selectedFamilies.length + (inStockOnly ? 1 : 0) + (searchQuery ? 1 : 0);
 
-  const clearFilters = () => {
-    setSelectedCategories([]);
-    setSelectedFamilies([]);
-    setSearchQuery('');
-    setSortBy('featured');
-    setCurrentPage(1);
+  const clear = () => {
+    setSelectedCategories([]); setSelectedFamilies([]); setSearchQuery(''); setSortBy('featured'); setCurrentPage(1); setInStockOnly(false);
     setSearchParams({});
   };
 
+  const filters = (
+    <div className={styles.filters}>
+      <div className={styles.group}>
+        <h3 id="f-cat">Category</h3>
+        <div role="group" aria-labelledby="f-cat">
+          {CATEGORIES.map((c) => (
+            <label key={c} className={styles.check}>
+              <input type="checkbox" checked={selectedCategories.includes(c)} onChange={() => toggle(selectedCategories, c, setSelectedCategories)} />
+              {c}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className={styles.group}>
+        <h3 id="f-fam">Fragrance family</h3>
+        <div role="group" aria-labelledby="f-fam">
+          {FAMILIES.map((f) => (
+            <label key={f} className={styles.check}>
+              <input type="checkbox" checked={selectedFamilies.includes(f)} onChange={() => toggle(selectedFamilies, f, setSelectedFamilies)} />
+              {f}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className={styles.group}>
+        <h3 id="f-avail">Availability</h3>
+        <label className={styles.check}>
+          <input type="checkbox" checked={inStockOnly} onChange={(e) => { setInStockOnly(e.target.checked); setCurrentPage(1); }} />
+          In stock only
+        </label>
+      </div>
+      <button type="button" className="btn btn-ghost" onClick={clear}>Clear all filters</button>
+    </div>
+  );
+
   return (
     <div className={styles.page}>
-      <div className={styles.titleArea}>
-        <h1 className={styles.title}>The Fragrance Sanctuary</h1>
-        <p className={styles.subtitle}>Filter by concentration, olfactory family, or rare botanical notes</p>
-      </div>
+      <div className="container">
+        <p className="eyebrow">Shop</p>
+        <h1 className={styles.title}>Find your fragrance</h1>
+        <p className={styles.sub}>Search by name or note, filter by collection, sort by price or rating.</p>
 
-      <div className={styles.layout}>
-        {/* Sidebar Filters */}
-        <aside className={styles.sidebar}>
-          <div>
-            <h3 className={styles.filterGroupTitle}>Category</h3>
-            <div className={styles.filterList}>
-              {CATEGORIES.map((cat) => (
-                <label key={cat} className={styles.checkboxItem}>
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat)}
-                    onChange={() => toggleCategory(cat)}
-                  />
-                  {cat}
-                </label>
-              ))}
-            </div>
+        <div className={styles.toolbar}>
+          <form className={styles.search} role="search" onSubmit={(e) => e.preventDefault()}>
+            <FiSearch aria-hidden="true" />
+            <label htmlFor="shop-q" className="sr-only">Search products</label>
+            <input
+              id="shop-q" value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              placeholder="Search rose, oud, vanilla…"
+            />
+            {searchQuery && <button type="button" aria-label="Clear search" onClick={() => setSearchQuery('')} className={styles.clearQ}><FiX /></button>}
+          </form>
+          <div className={styles.toolbarRight}>
+            <p className={styles.count} role="status" aria-live="polite">{filtered.length} result{filtered.length === 1 ? '' : 's'}</p>
+            <label className={styles.sortWrap}>
+              <span className="sr-only">Sort products</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="featured">Featured</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+                <option value="rating">Top rated</option>
+              </select>
+            </label>
+            <button type="button" className="btn btn-secondary" onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen} aria-controls="shop-filters">
+              Filters{activeCount ? ` (${activeCount})` : ''}
+            </button>
           </div>
+        </div>
 
-          <div>
-            <h3 className={styles.filterGroupTitle}>Fragrance Family</h3>
-            <div className={styles.filterList}>
-              {FAMILIES.map((fam) => (
-                <label key={fam} className={styles.checkboxItem}>
-                  <input
-                    type="checkbox"
-                    checked={selectedFamilies.includes(fam)}
-                    onChange={() => toggleFamily(fam)}
-                  />
-                  {fam}
-                </label>
-              ))}
-            </div>
+        <div className={styles.layout}>
+          <aside className={styles.sidebar} aria-label="Filters">{filters}</aside>
+          {filtersOpen && <div id="shop-filters" className={styles.mobileFilters}>{filters}</div>}
+
+          <div className={styles.results}>
+            {visible.length === 0 ? (
+              <div className="empty">
+                <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No matches found</h2>
+                <p>Try a different note (e.g. “amber”, “jasmine”) or clear filters.</p>
+                <p style={{ marginTop: '1rem' }}><button type="button" className="btn btn-primary" onClick={clear}>Clear filters</button></p>
+              </div>
+            ) : (
+              <div className={styles.grid}>
+                {visible.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <nav className={styles.pager} aria-label="Pagination">
+                <button type="button" className="btn btn-secondary" disabled={page <= 1} onClick={() => setCurrentPage(page - 1)}>← Prev</button>
+                <span aria-current="page">Page {page} of {totalPages}</span>
+                <button type="button" className="btn btn-secondary" disabled={page >= totalPages} onClick={() => setCurrentPage(page + 1)}>Next →</button>
+              </nav>
+            )}
           </div>
-
-          <button className={styles.clearBtn} onClick={clearFilters}>
-            Reset All Filters
-          </button>
-        </aside>
-
-        {/* Main Product Grid Area */}
-        <main>
-          <div className={styles.topControlBar}>
-            <div className={styles.searchBox}>
-              <span className={styles.searchIcon}><FiSearch /></span>
-              <input
-                type="text"
-                placeholder="Search by name or note e.g. Rose, Oud, Vanilla..."
-                className={styles.searchInput}
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              />
-            </div>
-
-            <select className={styles.sortSelect} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="featured">Featured Curations</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-          </div>
-
-          {paginatedProducts.length === 0 ? (
-            <div className={styles.noResults}>
-              <p>No artisanal fragrances matched your current filter criteria.</p>
-              <button onClick={clearFilters} style={{ color: 'var(--gold-primary)', marginTop: '0.75rem', textDecoration: 'underline' }}>
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            <div className={styles.grid}>
-              {paginatedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className={styles.pagination}>
-              {[...Array(totalPages)].map((_, idx) => {
-                const pageNum = idx + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    className={`${styles.pageBtn} ${pageNum === currentPage ? styles.activePage : ''}`}
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </main>
+        </div>
       </div>
     </div>
   );

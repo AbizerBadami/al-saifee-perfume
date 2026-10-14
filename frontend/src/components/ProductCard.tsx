@@ -6,69 +6,75 @@ import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import styles from './ProductCard.module.css';
 
-interface ProductCardProps {
-  product: Product;
+function formatINR(n: number) {
+  return `₹${n.toLocaleString('en-IN')}`;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useStore();
-  const isWished = isInWishlist(product.id);
-
-  const displayPrice = product.salePrice || product.price;
+  const wished = isInWishlist(product.id);
+  const price = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price;
+  const out = product.stock <= 0;
+  const low = !out && product.stock <= 10;
+  const discount = product.salePrice && product.salePrice < product.price
+    ? Math.round((1 - product.salePrice / product.price) * 100)
+    : 0;
 
   return (
-    <div className={styles.card}>
-      <div className={styles.imageWrapper}>
-        <Link to={`/product/${product.id}`}>
+    <article className={styles.card} aria-labelledby={`p-${product.id}`}>
+      <div className={styles.media}>
+        <Link to={`/product/${product.id}`} tabIndex={-1} aria-hidden="true">
           <img
-            src={product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=800'}
-            alt={product.title}
-            className={styles.image}
+            src={product.images?.[0] || 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=800'}
+            alt=""
+            loading="lazy"
             referrerPolicy="no-referrer"
           />
         </Link>
-
-        <div className={styles.badgeGroup}>
-          {product.isBestSeller && <span className={`${styles.badge} ${styles.bestSellerBadge}`}>Best Seller</span>}
-          {product.salePrice && <span className={styles.badge}>Special Offer</span>}
+        <div className={styles.badges}>
+          {discount > 0 && <span className={styles.off}>{discount}% off</span>}
+          {product.isBestSeller && <span className={styles.tag}>Bestseller</span>}
+          {out && <span className={styles.soldout}>Sold out</span>}
         </div>
-
         <button
-          className={`${styles.wishlistBtn} ${isWished ? styles.activeWishlist : ''}`}
+          type="button"
+          className={`${styles.wish} ${wished ? styles.wished : ''}`}
           onClick={() => toggleWishlist(product.id)}
-          title={isWished ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          aria-pressed={wished}
+          aria-label={wished ? `Remove ${product.title} from wishlist` : `Save ${product.title} to wishlist`}
         >
-          <span style={{ color: isWished ? '#ef4444' : 'inherit', display: 'inline-block' }}><FiHeart /></span>
+          <FiHeart aria-hidden="true" />
         </button>
       </div>
 
-      <div className={styles.details}>
-        <div>
-          <div className={styles.category}>{product.category} • {product.fragranceFamily}</div>
-          <Link to={`/product/${product.id}`}>
-            <h3 className={styles.title}>{product.title}</h3>
-          </Link>
-          <div className={styles.subtitle}>{product.subtitle}</div>
-
-          <div className={styles.ratingRow}>
-            <span style={{ color: 'var(--gold-primary)', display: 'inline-block' }}><FiStar /></span>
-            <span>{product.rating.toFixed(1)}</span>
-            <span className={styles.reviewCount}>({product.reviewCount})</span>
-          </div>
-        </div>
-
-        <div className={styles.footerRow}>
-          <div className={styles.priceArea}>
-            <span className={styles.price}>₹{displayPrice.toLocaleString('en-IN')}</span>
-            {product.salePrice && <span className={styles.oldPrice}>₹{product.price.toLocaleString('en-IN')}</span>}
-          </div>
-
-          <button className={styles.cartBtn} onClick={() => addToCart(product)}>
-            <FiShoppingBag /> Add
+      <div className={styles.body}>
+        <p className={styles.meta}>{product.category} · {product.fragranceFamily}</p>
+        <Link to={`/product/${product.id}`} id={`p-${product.id}`} className={styles.title}>
+          <h3>{product.title}</h3>
+        </Link>
+        <p className={styles.sub}>{product.subtitle}</p>
+        <p className={styles.rating} aria-label={`Rated ${product.rating.toFixed(1)} out of 5 from ${product.reviewCount} reviews`}>
+          <FiStar aria-hidden="true" /> {product.rating.toFixed(1)} <span>({product.reviewCount})</span>
+        </p>
+        <div className={styles.buy}>
+          <p className={styles.price}>
+            <strong>{formatINR(price)}</strong>
+            {product.salePrice ? <s>{formatINR(product.price)}</s> : null}
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={out}
+            onClick={() => addToCart(product)}
+            aria-label={out ? `${product.title} is out of stock` : `Add ${product.title} to cart`}
+          >
+            <FiShoppingBag aria-hidden="true" /> {out ? 'Sold out' : 'Add'}
           </button>
         </div>
+        {low ? <p className={styles.low} role="status">Only {product.stock} left</p> : null}
+        <p className={styles.size}>{product.bottleSizes?.[0] ? `From ${product.bottleSizes[0]} · ${product.bottleSizes.length} sizes` : 'Multiple sizes'}</p>
       </div>
-    </div>
+    </article>
   );
 };

@@ -1,7 +1,5 @@
 // ============================================================
-// StoreContext — Rewritten for Cloudflare D1 REST API
-// Replaces all Firebase Firestore calls with fetch-based API calls
-// Keeps the exact same interface so all consuming components work unchanged
+// StoreContext — Centralized State & Cloudflare D1 REST API Sync
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -23,10 +21,9 @@ interface StoreContextType {
   deleteProduct: (id: string) => Promise<void>;
   saveProduct: (product: Partial<Product>) => Promise<void>;
   resetDemoProducts: () => Promise<void>;
-  createOrder: (orderData: Omit<Order, 'id' | 'createdAt'>) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: Order['status'], trackingNumber?: string) => Promise<void>;
   getOrderById: (orderId: string) => Order | undefined;
-  addReview: (productId: string, userName: string, userEmail: string, rating: number, comment: string) => Promise<void>;
+  addReview: (productId: string, userName: string, userEmail: string, orderNumber: string, rating: number, comment: string) => Promise<void>;
   approveReview: (reviewId: string) => Promise<void>;
   deleteReview: (reviewId: string) => Promise<void>;
   moderateReview: (reviewId: string, status: 'Approved' | 'Rejected') => Promise<void>;
@@ -49,7 +46,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+<<<<<<< HEAD
   // Security: Do not persist orders in unencrypted localStorage
+=======
+  // Orders live only in D1 (created via Razorpay verify). Never persisted to
+  // browser storage: they contain customer PII and go stale instantly.
+>>>>>>> 03fb960 (rebuild)
   const [orders, setOrders] = useState<Order[]>([]);
 
   const [reviews, setReviews] = useState<Review[]>(() => {
@@ -83,6 +85,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Fetch data from the D1 API on mount
   useEffect(() => {
+    // One-time cleanup: drop legacy cached orders (customer PII must not sit in browser storage)
+    try { localStorage.removeItem('oud_elixir_orders'); } catch {}
     const fetchInitialData = async () => {
       try {
         const [productsRes, settingsRes, reviewsRes] = await Promise.allSettled([
@@ -113,7 +117,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchInitialData();
   }, []);
 
-  // Persist to localStorage on state changes
+  // Persist to localStorage on state changes (orders excluded — server-side only)
   useEffect(() => { localStorage.setItem('oud_elixir_products', JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem('oud_elixir_reviews', JSON.stringify(reviews)); }, [reviews]);
   useEffect(() => { localStorage.setItem('oud_elixir_settings', JSON.stringify(settings)); }, [settings]);
@@ -129,9 +133,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Products CRUD
   const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'rating' | 'reviewCount'>) => {
     try {
-      const created = await productsAPI.create(productData);
-      setProducts((prev) => [created, ...prev]);
-    } catch (e) {
+      const res = await productsAPI.create(productData);
+      const created = (res as unknown as { product: Product }).product ?? (res as unknown as Product);
+      if (created && (created as Product).id) setProducts((prev) => [created as Product, ...prev]);
+    } catch {
       // Fallback: create locally
       const newProduct: Product = {
         ...productData,
@@ -184,6 +189,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+<<<<<<< HEAD
   // Orders CRUD
   const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt'>): Promise<Order> => {
     try {
@@ -222,42 +228,56 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.warn('Updated order status locally');
     }
+=======
+  // Orders are created server-side via Razorpay checkout verify only.
+  // There is intentionally no client-side createOrder (no POST /api/orders):
+  // totals, stock and payment state are authoritative on the Worker.
+
+  const updateOrderStatus = async (orderId: string, status: Order['status'], trackingNumber?: string) => {
+    await ordersAPI.updateStatus(orderId, { status, trackingNumber });
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status, trackingNumber: trackingNumber || o.trackingNumber } : o))
+    );
+>>>>>>> 03fb960 (rebuild)
   };
 
   const getOrderById = (orderId: string) => {
     return orders.find((o) => o.id === orderId || o.orderNumber === orderId);
   };
 
-  // Reviews CRUD
-  const addReview = async (productId: string, userName: string, userEmail: string, rating: number, comment: string) => {
-    const newReview: Review = {
-      id: 'rev-' + Date.now(),
-      productId,
-      userName,
-      userEmail,
-      rating,
-      comment,
-      status: 'Approved',
-      createdAt: new Date().toISOString(),
-    };
-
-    setReviews((prev) => [newReview, ...prev]);
-
-    // Update product rating average locally
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === productId) {
-          const totalReviews = p.reviewCount + 1;
-          const newAvg = Math.round(((p.rating * p.reviewCount + rating) / totalReviews) * 10) / 10;
-          return { ...p, rating: newAvg, reviewCount: totalReviews };
-        }
-        return p;
-      })
-    );
-
+  // Reviews — verified purchase only. Server validates order + email + item.
+  // Verification failures (403/404/409) are propagated to the form;
+  // only a network failure (status 0) queues locally as Pending.
+  const addReview = async (productId: string, userName: string, userEmail: string, orderNumber: string, rating: number, comment: string) => {
+    const safeRating = Math.min(5, Math.max(1, Math.round(rating)));
     try {
-      await reviewsAPI.create({ productId, userName, userEmail, rating, comment });
-    } catch (e) {}
+      const res = await reviewsAPI.create({ productId, userName, userEmail, orderNumber, rating: safeRating, comment });
+      const created = (res as unknown as { review: Review }).review ?? (res as unknown as Review);
+      if (created && (created as Review).id) {
+        setReviews((prev) => [created as Review, ...prev]);
+        return;
+      }
+      throw new Error('Review was not accepted. Please try again.');
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 0 || status === undefined) {
+        const pending: Review = {
+          id: 'rev-' + Date.now(),
+          productId,
+          userName,
+          userEmail,
+          orderNumber,
+          verifiedPurchase: false,
+          rating: safeRating,
+          comment,
+          status: 'Pending',
+          createdAt: new Date().toISOString(),
+        };
+        setReviews((prev) => [pending, ...prev]);
+        return;
+      }
+      throw err;
+    }
   };
 
   const approveReview = async (reviewId: string) => {
@@ -276,10 +296,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Settings
   const updateSettings = async (newSettings: Partial<StoreSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    const next = { ...settings, ...newSettings };
+    setSettings(next);
     try {
-      await settingsAPI.update({ ...settings, ...newSettings });
-    } catch (e) {}
+      localStorage.setItem('alsaifee_settings', JSON.stringify(next));
+      window.dispatchEvent(new Event('alsaifee_settings'));
+    } catch {}
+    try {
+      await settingsAPI.update(next);
+    } catch {}
   };
 
   return (
@@ -288,7 +313,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         products, orders, reviews, settings, wishlist, loading,
         toggleWishlist, isInWishlist,
         addProduct, updateProduct, deleteProduct, saveProduct, resetDemoProducts,
-        createOrder, updateOrderStatus, getOrderById,
+        updateOrderStatus, getOrderById,
         addReview, approveReview, deleteReview, moderateReview,
         updateSettings,
       }}

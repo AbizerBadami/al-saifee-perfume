@@ -1,132 +1,110 @@
-// ============================================================
-// Centralized API Client — fetches from Cloudflare Worker
-// Replaces all direct Firebase SDK calls
-// ============================================================
+// Centralized API client — typed, consistent errors
+const API_BASE = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '') || '/api';
 
+<<<<<<< HEAD
 const API_BASE = import.meta.env.VITE_API_URL || 'https://al-saifee-api.al-saifee-worker.workers.dev/api';
+=======
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+>>>>>>> 03fb960 (rebuild)
 
-/** Get the stored JWT token */
 export function getToken(): string | null {
-  return localStorage.getItem('al_saifee_token');
+  try { return localStorage.getItem('alsaifee_token') || localStorage.getItem('al_saifee_token'); }
+  catch { return null; }
 }
-
-/** Store the JWT token */
 export function setToken(token: string): void {
-  localStorage.setItem('al_saifee_token', token);
+  localStorage.setItem('alsaifee_token', token);
+  try { localStorage.removeItem('al_saifee_token'); } catch {}
 }
-
-/** Clear the JWT token */
 export function clearToken(): void {
-  localStorage.removeItem('al_saifee_token');
+  try { localStorage.removeItem('alsaifee_token'); localStorage.removeItem('al_saifee_token'); } catch {}
 }
 
-/** Generic fetch wrapper with auth header and error handling */
-async function apiFetch<T = unknown>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
   }
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
-
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((body as { error?: string }).error || `API Error: ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    const msg = (body as { error?: string }).error || `Request failed (${res.status})`;
+    // Admin token is single-use session: drop it when the API says it's invalid.
+    if (res.status === 401) {
+      clearToken();
+      try { window.dispatchEvent(new Event('alsaifee_logout')); } catch {}
+    }
+    throw new ApiError(msg, res.status);
   }
-
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
-// ---------- Products ----------
+import type { Product, Order, Review, StoreSettings } from '../types';
 
 export const productsAPI = {
-  list: () => apiFetch<{ products: any[]; total: number }>('/products'),
-  get: (id: string) => apiFetch<any>(`/products/${id}`),
-  create: (data: any) => apiFetch<any>('/products', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => apiFetch<any>(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => apiFetch<any>(`/products/${id}`, { method: 'DELETE' }),
+  list: () => apiFetch<{ products: Product[]; total: number }>('/products'),
+  get: (id: string) => apiFetch<{ product: Product }>(`/products/${encodeURIComponent(id)}`),
+  create: (data: Partial<Product>) => apiFetch<{ product: Product }>('/products', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<Product>) => apiFetch<{ product: Product }>(`/products/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => apiFetch<{ id: string }>(`/products/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
-
-// ---------- Orders ----------
 
 export const ordersAPI = {
-  list: () => apiFetch<{ orders: any[]; total: number }>('/orders'),
-  get: (id: string) => apiFetch<any>(`/orders/${id}`),
+  list: (limit = 50, offset = 0) => apiFetch<{ orders: Order[]; total: number }>(`/orders?limit=${limit}&offset=${offset}`),
+  get: (id: string) => apiFetch<{ order: Order }>(`/orders/${encodeURIComponent(id)}`),
   lookup: (orderNumber: string, email: string) =>
-    apiFetch<any>(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(email)}`),
-  create: (data: any) => apiFetch<any>('/orders', { method: 'POST', body: JSON.stringify(data) }),
-  updateStatus: (id: string, data: any) =>
-    apiFetch<any>(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
+    apiFetch<{ order: Order }>(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(email)}`),
+  updateStatus: (id: string, data: { status?: string; trackingNumber?: string; paymentStatus?: string }) =>
+    apiFetch<{ order: Order }>(`/orders/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
-
-// ---------- Reviews ----------
 
 export const reviewsAPI = {
-  list: (productId?: string) =>
-    apiFetch<{ reviews: any[]; total: number }>(productId ? `/reviews?productId=${productId}` : '/reviews'),
-  create: (data: any) => apiFetch<any>('/reviews', { method: 'POST', body: JSON.stringify(data) }),
-  moderate: (id: string, status: string) =>
-    apiFetch<any>(`/reviews/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  delete: (id: string) => apiFetch<any>(`/reviews/${id}`, { method: 'DELETE' }),
+  list: (productId?: string) => apiFetch<{ reviews: Review[]; total: number }>(productId ? `/reviews?productId=${encodeURIComponent(productId)}` : '/reviews'),
+  // Admin moderation queue (requires admin JWT; 401 otherwise)
+  adminList: (status: 'Pending' | 'Approved' | 'Rejected' = 'Pending', productId?: string) =>
+    apiFetch<{ reviews: Review[]; total: number }>(
+      `/reviews?status=${status}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`
+    ),
+  create: (data: { productId: string; userName: string; userEmail: string; orderNumber: string; rating: number; comment: string }) =>
+    apiFetch<{ review: Review; message?: string }>('/reviews', { method: 'POST', body: JSON.stringify(data) }),
+  moderate: (id: string, status: string) => apiFetch<{ review: Review }>(`/reviews/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  delete: (id: string) => apiFetch<{ id: string }>(`/reviews/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
-
-
-
-// ---------- Settings ----------
 
 export const settingsAPI = {
-  get: () => apiFetch<any>('/settings'),
-  update: (data: any) => apiFetch<any>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  get: () => apiFetch<StoreSettings>('/settings'),
+  update: (data: StoreSettings) => apiFetch<StoreSettings>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
-// ---------- Auth ----------
-
 export const authAPI = {
-  register: (email: string, password: string) =>
-    apiFetch<{ success: boolean; token: string; admin: any; message: string }>(
-      '/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }
-    ),
   login: (email: string, password: string) =>
-    apiFetch<{ success: boolean; token: string; admin: any }>(
-      '/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }
-    ),
+    apiFetch<{ success: boolean; token: string; admin: unknown }>(`/auth/login`, { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: () => apiFetch<{ id: string; email: string; isAdmin: boolean }>('/auth/me'),
 };
 
-// ---------- Checkout (Razorpay) ----------
-
 export const checkoutAPI = {
-  createOrder: (items: any[], currency: string, customerName: string, customerEmail: string) =>
-    apiFetch<{ orderId: string; amount: number; currency: string; keyId: string }>(
-      '/checkout/create-order', { method: 'POST', body: JSON.stringify({ items, currency, customerName, customerEmail }) }
-    ),
-  verify: (
-    razorpay_order_id: string,
-    razorpay_payment_id: string,
-    razorpay_signature: string,
-    items: any[],
-    shippingAddress: any,
-    customerName: string,
-    customerEmail: string
-  ) =>
-    apiFetch<{ verified: boolean; orderId?: string; orderNumber?: string; total?: number; error?: string }>(
-      '/checkout/verify', {
-        method: 'POST',
-        body: JSON.stringify({
-          razorpay_order_id, razorpay_payment_id, razorpay_signature,
-          items, shippingAddress, customerName, customerEmail
-        })
-      }
+  createOrder: (items: unknown[], currency: string, customerName: string, customerEmail: string) =>
+    apiFetch<{ orderId: string; amount: number; currency: string; keyId: string }>('/checkout/create-order', {
+      method: 'POST', body: JSON.stringify({ items, currency, customerName, customerEmail }),
+    }),
+  verify: (payload: {
+    razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string;
+    items: unknown[]; shippingAddress: unknown; customerName: string; customerEmail: string;
+  }) =>
+    apiFetch<{ verified: boolean; orderId?: string; orderNumber?: string; subtotal?: number; tax?: number; shippingFee?: number; total?: number; error?: string }>(
+      '/checkout/verify', { method: 'POST', body: JSON.stringify(payload) }
     ),
 };

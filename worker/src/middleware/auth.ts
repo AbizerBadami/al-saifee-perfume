@@ -66,7 +66,17 @@ export async function verifyJWT(token: string, secret: string): Promise<Record<s
   return payload;
 }
 
-// ---------- Password hashing (PBKDF2 via Web Crypto) ----------
+/** Constant-time string comparison to avoid timing side-channels */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
 export async function hashPassword(password: string): Promise<string> {
   const enc = new TextEncoder();
@@ -85,7 +95,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
   const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256);
 
-  return toBase64Url(hash) === hashB64;
+  return timingSafeEqual(toBase64Url(hash), hashB64);
 }
 
 // ---------- Hono middleware ----------
@@ -94,13 +104,18 @@ export async function verifyPassword(password: string, stored: string): Promise<
 export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ error: 'Unauthorized — missing token' }, 401);
+    return c.json({ error: 'Unauthorized — sign in as admin', code: 'UNAUTHORIZED' }, 401);
+  }
+
+  if (!c.env.JWT_SECRET) {
+    console.error('JWT_SECRET missing');
+    return c.json({ error: 'Server auth is not configured', code: 'CONFIG' }, 500);
   }
 
   const token = authHeader.slice(7);
   const payload = await verifyJWT(token, c.env.JWT_SECRET);
   if (!payload) {
-    return c.json({ error: 'Unauthorized — invalid or expired token' }, 401);
+    return c.json({ error: 'Unauthorized — session expired, please sign in again', code: 'UNAUTHORIZED' }, 401);
   }
 
   // Attach admin info to the context for downstream handlers
@@ -109,3 +124,16 @@ export const authGuard = createMiddleware<{ Bindings: Bindings; Variables: Varia
 
   await next();
 });
+
+/** Best-effort admin check for mixed public/admin endpoints (e.g. review moderation queues).
+ *  Returns true only when a valid admin JWT is present. Never throws. */
+export async function isAdminRequest(c: { req: { header: (n: string) => string | undefined }; env: Bindings }): Promise<boolean> {
+  try {
+    const h = c.req.header('Authorization');
+    if (!h?.startsWith('Bearer ') || !c.env.JWT_SECRET) return false;
+    const payload = await verifyJWT(h.slice(7), c.env.JWT_SECRET);
+    return Boolean(payload?.sub);
+  } catch {
+    return false;
+  }
+}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FiHeart, FiShoppingBag, FiStar, FiArrowLeft, FiClock, FiActivity, FiAward } from 'react-icons/fi';
+import { FiHeart, FiShoppingBag, FiArrowLeft, FiMinus, FiPlus } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
 import { FragranceNotes } from '../components/FragranceNotes';
@@ -11,177 +11,133 @@ export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { products, isInWishlist, toggleWishlist } = useStore();
   const { addToCart } = useCart();
-
   const product = products.find((p) => p.id === id);
 
-  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
-  const [selectedSize, setSelectedSize] = useState<string>('');
-  const [quantity, setQuantity] = useState(1);
+  const [imgIdx, setImgIdx] = useState(0);
+  const [size, setSize] = useState('');
+  const [qty, setQty] = useState(1);
 
   if (!product) {
     return (
-      <div className={styles.page} style={{ textAlign: 'center', paddingTop: '4rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold-light)' }}>Fragrance Creation Not Found</h2>
-        <Link to="/shop" style={{ color: 'var(--gold-primary)', marginTop: '1rem', display: 'inline-block' }}>
-          <span style={{ verticalAlign: 'middle', display: 'inline-block' }}><FiArrowLeft /></span> Return to Collection
-        </Link>
+      <div className="container" style={{ padding: '4rem 1.25rem', textAlign: 'center' }}>
+        <p className="eyebrow">Not found</p>
+        <h1>This fragrance isn&apos;t available</h1>
+        <p className="muted" style={{ margin: '0.75rem 0 1.5rem' }}>It may have been removed or renamed.</p>
+        <Link to="/shop" className="btn btn-primary"><FiArrowLeft /> Back to shop</Link>
       </div>
     );
   }
 
-  const sizes = product.bottleSizes && product.bottleSizes.length ? product.bottleSizes : ['50ml Spray', '100ml Spray'];
-  const activeSize = selectedSize || sizes[0];
-  const isWished = isInWishlist(product.id);
-  const displayPrice = product.salePrice || product.price;
-
-  const handleAddToCart = () => {
-    addToCart(product, activeSize, quantity);
-  };
+  const sizes = product.bottleSizes?.length ? product.bottleSizes : ['3ml', '6ml', '12ml'];
+  const activeSize = size || sizes[0];
+  const price = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price;
+  const out = product.stock <= 0;
+  const maxQty = Math.max(1, Math.min(product.stock || 1, 10));
+  const wished = isInWishlist(product.id);
 
   return (
     <div className={styles.page}>
-      <Link to="/shop" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1.5rem' }}>
-        <FiArrowLeft /> Back to Collection
-      </Link>
+      <div className="container">
+        <nav aria-label="Breadcrumb" className={styles.crumb}>
+          <Link to="/">Home</Link> <span aria-hidden="true">/</span> <Link to="/shop">Shop</Link> <span aria-hidden="true">/</span> <span aria-current="page">{product.title}</span>
+        </nav>
 
-      <div className={styles.topLayout}>
-        {/* Gallery Column */}
-        <div className={styles.gallery}>
-          <div className={styles.mainImageWrapper}>
-            <img
-              src={product.images[selectedImageIdx] || product.images[0]}
-              alt={product.title}
-              className={styles.mainImage}
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
+        <div className={styles.layout}>
+          <div className={styles.gallery}>
+            <div className={styles.main}>
+              <img
+                src={product.images?.[imgIdx] || product.images?.[0] || ''}
+                alt={`${product.title} — product photo`}
+                loading="eager"
+                referrerPolicy="no-referrer"
+              />
+              {out && <span className={styles.soldout}>Out of stock</span>}
+            </div>
+            {product.images?.length > 1 && (
+              <div className={styles.thumbs} role="group" aria-label="Product images">
+                {product.images.map((src, i) => (
+                  <button
+                    key={i} type="button"
+                    className={`${styles.thumb} ${i === imgIdx ? styles.active : ''}`}
+                    onClick={() => setImgIdx(i)}
+                    aria-pressed={i === imgIdx}
+                    aria-label={`View image ${i + 1}`}
+                  >
+                    <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {product.images.length > 1 && (
-            <div className={styles.thumbRow}>
-              {product.images.map((imgUrl, idx) => (
-                <div
-                  key={idx}
-                  className={`${styles.thumb} ${idx === selectedImageIdx ? styles.activeThumb : ''}`}
-                  onClick={() => setSelectedImageIdx(idx)}
-                >
-                  <img src={imgUrl} alt="Thumbnail" className={styles.thumbImg} referrerPolicy="no-referrer" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Product Information Column */}
-        <div className={styles.infoCol}>
-          <div>
-            <div className={styles.categoryTag}>{product.category} • {product.fragranceFamily} Family</div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '4px', padding: '0.3rem 0.6rem', fontSize: '0.7rem',
-              color: '#10b981', fontWeight: 600, marginTop: '0.5rem'
-            }}>
-              ✓ 100% Non-Alcoholic • Halal Compliant • Pure Perfume Oil
-            </div>
+          <div className={styles.info}>
+            <p className={styles.meta}>{product.category} · {product.fragranceFamily}</p>
             <h1 className={styles.title}>{product.title}</h1>
-            <div className={styles.subtitle}>{product.subtitle}</div>
-          </div>
-
-          <div className={styles.priceRow}>
-            <span className={styles.price}>₹{displayPrice.toLocaleString('en-IN')}</span>
-            {product.salePrice && <span className={styles.oldPrice}>₹{product.price.toLocaleString('en-IN')}</span>}
-          </div>
-
-          <p className={styles.description}>{product.description}</p>
-
-          <div className={styles.specGrid}>
-            <div>
-              <div className={styles.specLabel}><span style={{ verticalAlign: 'middle', marginRight: '4px', display: 'inline-block' }}><FiClock /></span> Longevity</div>
-              <div className={styles.specVal}>{product.longevity || '12-14 Hours'}</div>
-            </div>
-            <div>
-              <div className={styles.specLabel}><span style={{ verticalAlign: 'middle', marginRight: '4px', display: 'inline-block' }}><FiActivity /></span> Projection</div>
-              <div className={styles.specVal}>{product.projection || 'Enveloping Sillage'}</div>
-            </div>
-          </div>
-
-          {/* Bottle Size Selector */}
-          <div>
-            <div className={styles.optionTitle}>Select Bottle Concentration / Size</div>
-            <div className={styles.sizesRow}>
-              {sizes.map((size) => (
-                <button
-                  key={size}
-                  className={`${styles.sizeBtn} ${size === activeSize ? styles.activeSize : ''}`}
-                  onClick={() => setSelectedSize(size)}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Add to Cart Controls */}
-          <div className={styles.actionRow}>
-            <div className={styles.qtyBox}>
-              <button className={styles.qtyBtn} onClick={() => setQuantity((q) => Math.max(1, q - 1))}>-</button>
-              <span className={styles.qtyVal}>{quantity}</span>
-              <button className={styles.qtyBtn} onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}>+</button>
-            </div>
-
-            <button className={styles.addBtn} onClick={handleAddToCart}>
-              <FiShoppingBag /> Add to Cart — ₹{(displayPrice * quantity).toLocaleString('en-IN')}
-            </button>
-
-            <button
-              className={`${styles.wishBtn} ${isWished ? styles.activeWish : ''}`}
-              onClick={() => toggleWishlist(product.id)}
-              title="Toggle Wishlist"
-            >
-              <span style={{ color: isWished ? '#ef4444' : 'inherit', display: 'inline-block' }}><FiHeart /></span>
-            </button>
-          </div>
-
-          {/* Stock Indicator */}
-          {product.stock <= 10 && product.stock > 0 && (
-            <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', fontWeight: 600 }}>
-              Only {product.stock} left in stock — order soon
-            </div>
-          )}
-          {product.stock === 0 && (
-            <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', fontWeight: 600 }}>
-              Currently out of stock
-            </div>
-          )}
-
-          {/* Notes Pyramid */}
-          <FragranceNotes
-            topNotes={product.topNotes}
-            middleNotes={product.middleNotes}
-            baseNotes={product.baseNotes}
-          />
-
-          {/* AI Scent Layering Recommendation */}
-          <div style={{
-            marginTop: '2rem',
-            padding: '1.25rem',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--gold-border)',
-            borderRadius: 'var(--radius-md)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gold-primary)', fontWeight: '600', marginBottom: '0.5rem' }}>
-              <FiAward /> AI Olfactory Layering Guide
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-              <strong>Master Perfumer's Tip:</strong> Pair <em>{product.title}</em> with our 100% alcohol-free <em>Royal Amber Attar</em> or <em>Tuscan Leather Extract</em> to create a deeper, multi-dimensional signature aura with over 16+ hours of projection.
+            <p className={styles.subtitle}>{product.subtitle}</p>
+            <p className={styles.rating} aria-label={`Rated ${product.rating.toFixed(1)} from ${product.reviewCount} reviews`}>
+              ★ {product.rating.toFixed(1)} · {product.reviewCount} review{product.reviewCount === 1 ? '' : 's'}
             </p>
+
+            <p className={styles.price}>
+              <strong>₹{price.toLocaleString('en-IN')}</strong>
+              {product.salePrice ? <s>₹{product.price.toLocaleString('en-IN')}</s> : null}
+              <span className={styles.perUnit}>Inclusive of taxes</span>
+            </p>
+
+            <p className={styles.desc}>{product.description}</p>
+
+            <div className={styles.specs}>
+              <div><span>Longevity</span><strong>{product.longevity || '8–12 hours'}</strong></div>
+              <div><span>Projection</span><strong>{product.projection || 'Moderate'}</strong></div>
+            </div>
+
+            <fieldset className={styles.field}>
+              <legend>Size — <strong>{activeSize}</strong></legend>
+              <div className={styles.sizes}>
+                {sizes.map((s) => (
+                  <button
+                    key={s} type="button"
+                    className={`${styles.size} ${s === activeSize ? styles.sizeActive : ''}`}
+                    onClick={() => setSize(s)}
+                    aria-pressed={s === activeSize}
+                  >{s}</button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className={styles.buyRow}>
+              <div className={styles.qty} role="group" aria-label="Quantity">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} aria-label="Decrease quantity"><FiMinus /></button>
+                <span aria-live="polite" aria-label={`Quantity ${qty}`}>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty || out} aria-label="Increase quantity"><FiPlus /></button>
+              </div>
+              <button type="button" className="btn btn-primary" disabled={out} onClick={() => addToCart(product, activeSize, qty)} style={{ flex: 1 }}>
+                <FiShoppingBag /> {out ? 'Out of stock' : `Add to cart · ₹${(price * qty).toLocaleString('en-IN')}`}
+              </button>
+              <button
+                type="button" className={`${styles.wish} ${wished ? styles.wished : ''}`}
+                onClick={() => toggleWishlist(product.id)} aria-pressed={wished}
+                aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}
+              ><FiHeart /></button>
+            </div>
+
+            {out
+              ? <p className={styles.stockOut} role="status">Currently out of stock. Check back soon or explore similar attars.</p>
+              : product.stock <= 10
+                ? <p className={styles.stockLow} role="status">Only {product.stock} left in stock</p>
+                : <p className={styles.stockOk} role="status">In stock, ready to ship</p>}
+
+            <FragranceNotes topNotes={product.topNotes} middleNotes={product.middleNotes} baseNotes={product.baseNotes} />
+
+            <div className={styles.tip}>
+              <strong>How to wear</strong>
+              <p>Apply a small amount to pulse points. Attars are concentrated — one swipe is enough for several hours.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Customer Reviews Section */}
-      <ReviewSection productId={product.id} />
+        <ReviewSection productId={product.id} />
+      </div>
     </div>
   );
 };

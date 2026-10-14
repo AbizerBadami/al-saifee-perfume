@@ -1,58 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { FiCheck, FiTruck, FiShoppingBag } from 'react-icons/fi';
-import { useStore } from '../context/StoreContext';
 import styles from './Success.module.css';
 
-export const Success: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const orderId = searchParams.get('orderId');
-  const { getOrderById } = useStore();
+interface LastOrder {
+  orderId: string;
+  orderNumber: string;
+  total: number;
+}
 
-  const order = orderId ? getOrderById(orderId) : undefined;
+export const Success: React.FC = () => {
+  const [params] = useSearchParams();
+  const orderId = params.get('orderId') || '';
+  const orderNumber = params.get('orderNumber') || '';
+  const totalParam = Number(params.get('total') || '0');
+  const [receipt, setReceipt] = useState<LastOrder | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('alsaifee_last_order');
+      if (saved) setReceipt(JSON.parse(saved) as LastOrder);
+    } catch {}
+  }, []);
+
+  const number = orderNumber || receipt?.orderNumber || '';
+  const total = totalParam || receipt?.total || 0;
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.checkIcon}>
-          <FiCheck />
-        </div>
+      <div className="container">
+        <div className={styles.card} role="status">
+          <span className={styles.check}><FiCheck aria-hidden="true" /></span>
+          <p className="eyebrow">Payment successful</p>
+          <h1 className={styles.h1}>Thank you — order confirmed</h1>
+          <p className={styles.lead}>We&apos;ve emailed your receipt and will ship soon. Track progress anytime with your order number.</p>
 
-        <h1 className={styles.title}>Acquisition Confirmed</h1>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '500px' }}>
-          Thank you for choosing Al-Saifee Perfumes. Your order has been registered in our subterranean vault and is being prepared for climate-controlled dispatch.
-        </p>
+          {number && (
+            <p className={styles.ref}>
+              Order <strong>{number}</strong>
+              {total > 0 && <> · ₹{total.toLocaleString('en-IN')}</>}
+            </p>
+          )}
+          {!number && !orderId && (
+            <p className={styles.lead}>No order reference found. If you just paid, check your email for confirmation.</p>
+          )}
 
-        {order ? (
-          <>
-            <div className={styles.orderNum}>Order Reference: {order.orderNumber}</div>
-
-            <div className={styles.summaryBox}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--gold-primary)', fontWeight: '600' }}>
-                <span>Billed To: {order.customerName}</span>
-                <span>Total: ₹{order.total.toLocaleString('en-IN')}</span>
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Confirmation sent to: <strong>{order.customerEmail}</strong>
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Estimated Delivery: <strong>2 - 4 Business Days (Express Courier)</strong>
-              </div>
-            </div>
-
-            <div className={styles.btnGroup}>
-              <Link to={`/tracking?orderId=${order.orderNumber}`} className={styles.trackBtn}>
-                <FiTruck /> Track Dispatch Status
+          <div className={styles.actions}>
+            {number && (
+              <Link to={`/tracking?orderId=${encodeURIComponent(number)}`} className="btn btn-primary">
+                <FiTruck /> Track order
               </Link>
-            </div>
-          </>
-        ) : (
-          <div className={styles.btnGroup}>
-            <Link to="/shop" className={styles.downloadBtn}>
-              <FiShoppingBag /> Return to Collection
-            </Link>
+            )}
+            <Link to="/shop" className="btn btn-secondary"><FiShoppingBag /> Continue shopping</Link>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

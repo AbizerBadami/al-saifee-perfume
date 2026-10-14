@@ -1,139 +1,105 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiX, FiTrash2, FiShoppingBag, FiCheckCircle } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiX, FiTrash2, FiShoppingBag, FiMinus, FiPlus } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import styles from './CartDrawer.module.css';
 
 export const CartDrawer: React.FC = () => {
   const {
-    cart,
-    isCartOpen,
-    closeCart,
-    removeFromCart,
-    updateQuantity,
-    subtotal,
-    tax,
-    shippingFee,
-    total,
-    freeShippingThreshold,
-    freeShippingProgress,
+    cart, isCartOpen, closeCart, removeFromCart, updateQuantity,
+    subtotal, tax, taxRate, shippingFee, total, freeShippingThreshold, freeShippingProgress, itemCount,
   } = useCart();
-
   const navigate = useNavigate();
+  const drawerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isCartOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCart(); };
+    window.addEventListener('keydown', onKey);
+    drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isCartOpen, closeCart]);
 
   if (!isCartOpen) return null;
 
-  const handleCheckoutClick = () => {
-    closeCart();
-    navigate('/checkout');
-  };
+  const remaining = Math.max(0, freeShippingThreshold - subtotal);
 
   return (
-    <div className={styles.overlay} onClick={closeCart}>
-      <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+    <div className={styles.root}>
+      <div className={styles.scrim} onClick={closeCart} aria-hidden="true" />
+      <div
+        ref={drawerRef}
+        className={styles.drawer}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Shopping cart, ${itemCount} items`}
+      >
         <div className={styles.header}>
-          <h3 className={styles.title}>Your Luxury Cart ({cart.length})</h3>
-          <button className={styles.closeBtn} onClick={closeCart}>
-            <FiX />
-          </button>
+          <h2 className={styles.title}>Cart ({itemCount})</h2>
+          <button type="button" className={styles.close} onClick={closeCart} aria-label="Close cart"><FiX /></button>
         </div>
 
-        <div className={styles.shippingBarContainer}>
-          <div className={styles.shippingText}>
-            {subtotal >= freeShippingThreshold ? (
-              <span style={{ color: 'var(--gold-primary)' }}>
-                <span style={{ verticalAlign: 'middle', marginRight: '4px', display: 'inline-block' }}><FiCheckCircle /></span>
-                You unlocked Complimentary Express Shipping!
-              </span>
-            ) : (
-              `Add ₹${Math.max(0, freeShippingThreshold - subtotal).toLocaleString('en-IN')} more for Complimentary Express Shipping`
-            )}
-          </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${freeShippingProgress}%` }} />
+        <div className={styles.ship}>
+          {subtotal >= freeShippingThreshold ? (
+            <p className={styles.shipOk} role="status">You&apos;ve unlocked free shipping</p>
+          ) : (
+            <p className={styles.shipText} role="status">Add ₹{remaining.toLocaleString('en-IN')} more for free shipping</p>
+          )}
+          <div className={styles.bar} role="progressbar" aria-valuenow={freeShippingProgress} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to free shipping">
+            <div className={styles.fill} style={{ width: `${freeShippingProgress}%` }} />
           </div>
         </div>
 
-        <div className={styles.itemsContainer}>
+        <div className={styles.items}>
           {cart.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem', color: 'var(--text-muted)' }}><FiShoppingBag /></div>
-              <p>Your acquisition bag is currently empty.</p>
-              <button
-                onClick={() => { closeCart(); navigate('/shop'); }}
-                style={{
-                  marginTop: '1rem',
-                  color: 'var(--gold-primary)',
-                  borderBottom: '1px solid var(--gold-primary)',
-                  paddingBottom: '2px',
-                  fontSize: '0.85rem'
-                }}
-              >
-                Discover Rare Fragrances
-              </button>
+            <div className={styles.empty}>
+              <FiShoppingBag aria-hidden="true" />
+              <p><strong>Your cart is empty</strong></p>
+              <p className="muted">Browse bestsellers or search by note.</p>
+              <button type="button" className="btn btn-primary" onClick={() => { closeCart(); navigate('/shop'); }}>Browse fragrances</button>
             </div>
           ) : (
-            cart.map((item, idx) => (
-              <div key={`${item.product.id}-${item.selectedSize}-${idx}`} className={styles.cartItem}>
-                <img
-                  src={item.product.images[0]}
-                  alt={item.product.title}
-                  className={styles.itemImage}
-                  referrerPolicy="no-referrer"
-                />
-                <div className={styles.itemDetails}>
-                  <div>
-                    <div className={styles.itemTitle}>{item.product.title}</div>
-                    <div className={styles.itemMeta}>Size: {item.selectedSize}</div>
-                    <div className={styles.itemMeta}>₹{item.price.toLocaleString('en-IN')} each</div>
-                  </div>
-
-                  <div className={styles.controlsRow}>
-                    <div className={styles.qtyControls}>
-                      <button className={styles.qtyBtn} onClick={() => updateQuantity(item.product.id, item.selectedSize, -1)}>-</button>
-                      <span className={styles.qtyValue}>{item.quantity}</span>
-                      <button className={styles.qtyBtn} onClick={() => updateQuantity(item.product.id, item.selectedSize, 1)}>+</button>
+            <ul className={styles.list}>
+              {cart.map((item) => (
+                <li key={`${item.product.id}-${item.selectedSize}`} className={styles.item}>
+                  <img src={item.product.images?.[0] || ''} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                  <div className={styles.detail}>
+                    <p className={styles.name}>{item.product.title}</p>
+                    <p className={styles.meta}>{item.selectedSize} · ₹{item.price.toLocaleString('en-IN')} each</p>
+                    <div className={styles.row}>
+                      <div className={styles.qty} role="group" aria-label={`Quantity for ${item.product.title}`}>
+                        <button type="button" onClick={() => updateQuantity(item.product.id, item.selectedSize, -1)} aria-label="Decrease quantity"><FiMinus /></button>
+                        <span aria-live="polite">{item.quantity}</span>
+                        <button type="button" onClick={() => updateQuantity(item.product.id, item.selectedSize, 1)} aria-label="Increase quantity"><FiPlus /></button>
+                      </div>
+                      <strong>₹{(item.price * item.quantity).toLocaleString('en-IN')}</strong>
+                      <button type="button" className={styles.remove} onClick={() => removeFromCart(item.product.id, item.selectedSize)} aria-label={`Remove ${item.product.title} from cart`}>
+                        <FiTrash2 />
+                      </button>
                     </div>
-
-                    <button
-                      className={styles.removeBtn}
-                      onClick={() => removeFromCart(item.product.id, item.selectedSize)}
-                      title="Remove item"
-                    >
-                      <FiTrash2 />
-                    </button>
                   </div>
-                </div>
-              </div>
-            ))
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
         {cart.length > 0 && (
           <div className={styles.footer}>
-            <div className={styles.summaryRow}>
-              <span>Subtotal</span>
-              <span>₹{subtotal.toLocaleString('en-IN')}</span>
-            </div>
-
-            <div className={styles.summaryRow}>
-              <span>Estimated Tax (10%)</span>
-              <span>₹{tax.toLocaleString('en-IN')}</span>
-            </div>
-
-            <div className={styles.summaryRow}>
-              <span>Express Shipping</span>
-              <span>{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toLocaleString('en-IN')}`}</span>
-            </div>
-
-            <div className={`${styles.summaryRow} ${styles.totalRow}`}>
-              <span>Total</span>
-              <span>₹{total.toLocaleString('en-IN')}</span>
-            </div>
-
-            <button className={styles.checkoutBtn} onClick={handleCheckoutClick}>
-              Proceed to Guest Checkout
+            <dl className={styles.totals}>
+              <div><dt>Subtotal</dt><dd>₹{subtotal.toLocaleString('en-IN')}</dd></div>
+              <div><dt>Tax ({Math.round(taxRate * 100)}%)</dt><dd>₹{tax.toLocaleString('en-IN')}</dd></div>
+              <div><dt>Shipping</dt><dd>{shippingFee === 0 ? 'Free' : `₹${shippingFee}`}</dd></div>
+              <div className={styles.grand}><dt>Total</dt><dd>₹{total.toLocaleString('en-IN')}</dd></div>
+            </dl>
+            <button
+              type="button" className="btn btn-primary"
+              style={{ width: '100%' }}
+              onClick={() => { closeCart(); navigate('/checkout'); }}
+            >
+              Continue to checkout · ₹{total.toLocaleString('en-IN')}
             </button>
+            <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={closeCart}>Continue shopping</button>
           </div>
         )}
       </div>

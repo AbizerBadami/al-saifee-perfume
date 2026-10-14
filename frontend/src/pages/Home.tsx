@@ -1,70 +1,84 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Hero } from '../components/Hero';
 import { ProductCard } from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
 import styles from './Home.module.css';
 
+const COLLECTIONS = [
+  { title: 'Pure Attars', blurb: 'Alcohol-free concentrated oils', to: '/shop?category=Pure%20Attars', img: 'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&q=80&w=800' },
+  { title: 'Oud Specials', blurb: 'Aged agarwood & deep woods', to: '/shop?category=Oud%20Specials', img: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&q=80&w=800' },
+  { title: 'Perfumes', blurb: 'Everyday extraits & sprays', to: '/shop?category=Perfumes', img: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&q=80&w=800' },
+];
+
 export const Home: React.FC = () => {
   const { products } = useStore();
-
   const featured = products.filter((p) => p.isFeatured).slice(0, 4);
   const bestSellers = products.filter((p) => p.isBestSeller).slice(0, 4);
+  const showFeatured = (featured.length ? featured : products.slice(0, 4));
+  const showBest = (bestSellers.length ? bestSellers : products.slice(0, 4));
 
   return (
-    <div className={styles.page}>
+    <div>
       <Hero />
 
-      {/* Featured Section */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Curated Masterpieces</h2>
-          <p className={styles.sectionSub}>
-            Discover rare olfactory creations distilled from wild aged agarwood resins and haute French extracts.
-          </p>
-        </div>
-
-        <div className={styles.productGrid}>
-          {featured.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
-
-      {/* Brand Heritage Story Banner */}
-      <section className={styles.storyBanner}>
-        <div className={styles.storyContainer}>
-          <img
-            src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&q=80&w=800"
-            alt="Artisanal Oud Alchemy"
-            className={styles.storyImage}
-            referrerPolicy="no-referrer"
-          />
-
-          <div>
-            <h2 className={styles.storyTitle}>Three Decades of Wild Agarwood Mastery</h2>
-            <p className={styles.storyText}>
-              In our private atelier, master perfumers slow-distill 30-year-old Cambodian wild agarwood in traditional hand-hammered copper stills. Each drop of pure attar oil undergoes six months of subterranean dark maturation, yielding an intoxicating depth impossible to replicate artificially.
-            </p>
-            <p className={styles.storyText}>
-              Free from synthetic extenders or industrial fillers. Pure unadulterated luxury.
-            </p>
+      <section className={styles.section} aria-labelledby="collections-h">
+        <div className="container">
+          <p className="eyebrow">Shop by collection</p>
+          <h2 id="collections-h" className={styles.h2}>Three ways to start</h2>
+          <div className={styles.collections}>
+            {COLLECTIONS.map((c) => (
+              <Link key={c.title} to={c.to} className={styles.tile}>
+                <img src={c.img} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                <span className={styles.tileBody}>
+                  <strong>{c.title}</strong>
+                  <span>{c.blurb}</span>
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Best Sellers Section */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>The Sovereign Collection</h2>
-          <p className={styles.sectionSub}>
-            Our most revered signatures requested by discerning royal families and perfume connoisseurs worldwide.
-          </p>
+      <section className={styles.section} aria-labelledby="feat-h">
+        <div className="container">
+          <div className={styles.row}>
+            <div>
+              <p className="eyebrow">Featured</p>
+              <h2 id="feat-h" className={styles.h2}>Loved for everyday wear</h2>
+              <p className={styles.lead}>Clear notes, honest longevity, sizes and prices up front.</p>
+            </div>
+            <Link to="/shop" className="btn btn-secondary">View all</Link>
+          </div>
+          <div className={styles.grid}>
+            {showFeatured.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
         </div>
+      </section>
 
-        <div className={styles.productGrid}>
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+      <section className={`${styles.section} ${styles.band}`} aria-labelledby="why-h">
+        <div className="container">
+          <h2 id="why-h" className={styles.h2}>Simple, transparent shopping</h2>
+          <div className={styles.why}>
+            <div><strong>Prices include taxes</strong><span>No surprises at checkout. Shipping calculated clearly.</span></div>
+            <div><strong>Sizes & stock shown</strong><span>Pick a bottle size, see availability before you buy.</span></div>
+            <div><strong>Track every order</strong><span>Order number + email gives you live status.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.section} aria-labelledby="best-h">
+        <div className="container">
+          <div className={styles.row}>
+            <div>
+              <p className="eyebrow">Bestsellers</p>
+              <h2 id="best-h" className={styles.h2}>Most repurchased</h2>
+            </div>
+            <Link to="/shop?sort=rating" className="btn btn-secondary">Top rated</Link>
+          </div>
+          <div className={styles.grid}>
+            {showBest.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
         </div>
       </section>
     </div>

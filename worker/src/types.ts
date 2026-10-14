@@ -101,6 +101,8 @@ export interface ReviewRow {
   rating: number;
   comment: string;
   status: string;
+  order_number: string | null;
+  verified_purchase: number;
   created_at: string;
 }
 
@@ -122,20 +124,35 @@ export interface AdminRow {
   created_at: string;
 }
 
-export interface TaskRow {
-  id: string;
-  title: string;
-  description: string;
-  priority: string;
-  completed: number; // 0 or 1
-  created_at: string;
-}
 
 // ---------- API Response helpers ----------
 
 /** Transforms a ProductRow into the JSON shape the frontend expects */
+<<<<<<< HEAD
 function safeJsonParse(str: string, fallback: any = {}): any {
   try { return JSON.parse(str); } catch { return fallback; }
+=======
+function safeJsonParseArray(str: unknown, fallback: string[] = []): string[] {
+  if (Array.isArray(str)) return str.map(String);
+  if (typeof str !== 'string') return fallback;
+  try {
+    const v = JSON.parse(str);
+    return Array.isArray(v) ? v.map(String) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeJsonParseObject(str: unknown, fallback: Record<string, unknown> = {}): Record<string, unknown> {
+  if (str && typeof str === 'object') return str as Record<string, unknown>;
+  if (typeof str !== 'string') return fallback;
+  try {
+    const v = JSON.parse(str);
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : fallback;
+  } catch {
+    return fallback;
+  }
+>>>>>>> 03fb960 (rebuild)
 }
 
 export function toProductJSON(row: ProductRow) {
@@ -149,13 +166,13 @@ export function toProductJSON(row: ProductRow) {
     salePrice: row.sale_price,
     stock: row.stock,
     description: row.description,
-    topNotes: safeJsonParse(row.top_notes),
-    middleNotes: safeJsonParse(row.middle_notes),
-    baseNotes: safeJsonParse(row.base_notes),
+    topNotes: safeJsonParseArray(row.top_notes),
+    middleNotes: safeJsonParseArray(row.middle_notes),
+    baseNotes: safeJsonParseArray(row.base_notes),
     longevity: row.longevity,
     projection: row.projection,
-    bottleSizes: safeJsonParse(row.bottle_sizes),
-    images: safeJsonParse(row.images),
+    bottleSizes: safeJsonParseArray(row.bottle_sizes),
+    images: safeJsonParseArray(row.images),
     isFeatured: Boolean(row.is_featured),
     isBestSeller: Boolean(row.is_best_seller),
     rating: row.rating,
@@ -165,11 +182,12 @@ export function toProductJSON(row: ProductRow) {
 }
 
 
-export function toReviewJSON(row: ReviewRow) {
-  return {
+export function toReviewJSON(row: ReviewRow, includePrivate = false) {
+  const base = {
     id: row.id,
     productId: row.product_id,
     userName: row.user_name,
+<<<<<<< HEAD
     rating: row.rating,
     comment: row.comment,
     status: row.status,
@@ -183,10 +201,19 @@ export function toAdminReviewJSON(row: ReviewRow) {
     productId: row.product_id,
     userName: row.user_name,
     userEmail: row.user_email,
+=======
+>>>>>>> 03fb960 (rebuild)
     rating: row.rating,
     comment: row.comment,
     status: row.status,
+    verifiedPurchase: Boolean(row.verified_purchase),
     createdAt: row.created_at,
+  };
+  if (!includePrivate) return base;
+  return {
+    ...base,
+    userEmail: row.user_email,
+    orderNumber: row.order_number,
   };
 }
 
@@ -227,7 +254,11 @@ export function toOrderJSON(row: OrderRow, items: OrderItemRow[]) {
     orderNumber: row.order_number,
     customerName: row.customer_name,
     customerEmail: row.customer_email,
+<<<<<<< HEAD
     shippingAddress: safeJsonParse(row.shipping_address, {}),
+=======
+    shippingAddress: safeJsonParseObject(row.shipping_address),
+>>>>>>> 03fb960 (rebuild)
     items: items.map((i) => ({
       product: { id: i.product_id, title: i.product_title },
       selectedSize: i.selected_size,
@@ -254,16 +285,5 @@ export function toSettingsJSON(row: StoreSettingsRow) {
     taxRate: row.tax_rate,
     freeShippingThreshold: row.free_shipping_threshold,
     promoMessage: row.promo_message,
-  };
-}
-
-export function toTaskJSON(row: TaskRow) {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    priority: row.priority,
-    completed: Boolean(row.completed),
-    createdAt: row.created_at,
   };
 }

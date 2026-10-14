@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { StoreProvider } from './context/StoreContext';
 import { CartProvider } from './context/CartContext';
@@ -18,6 +18,22 @@ import { OrderTracking } from './pages/OrderTracking';
 import { Wishlist } from './pages/Wishlist';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { useAuth } from './context/AuthContext';
+
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [pathname, search]);
+  return null;
+}
+
+function RequireAdmin({ children }: { children: React.ReactElement }) {
+  const { isAdmin, loading } = useAuth();
+  if (loading) return <div className="container" style={{ padding: '4rem 1.25rem' }}><p className="muted">Checking access…</p></div>;
+  if (!isAdmin) return <AdminLogin />;
+  return children;
+}
 
 export function App() {
   return (
@@ -26,11 +42,12 @@ export function App() {
         <AuthProvider>
           <StoreProvider>
             <CartProvider>
-              <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', color: 'var(--text-primary)', transition: 'background 0.3s ease, color 0.3s ease' }}>
+              <a href="#main" className="skip-link">Skip to main content</a>
+              <ScrollToTop />
+              <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                 <Navbar />
                 <CartDrawer />
-
-                <main style={{ flex: 1 }}>
+                <main id="main" style={{ flex: 1 }}>
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
@@ -40,11 +57,10 @@ export function App() {
                     <Route path="/tracking" element={<OrderTracking />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
                     <Route path="*" element={<Home />} />
                   </Routes>
                 </main>
-
                 <Footer />
               </div>
             </CartProvider>

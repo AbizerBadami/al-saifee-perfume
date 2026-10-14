@@ -1,214 +1,41 @@
-.page {
-  max-width: 1300px;
-  margin: 3rem auto;
-  padding: 0 2rem;
-  min-height: 80vh;
+.page { padding: 2.5rem 0 3.5rem; }
+.title { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin: 0; }
+.sub { color: var(--text-secondary); margin: 0.4rem 0 1.5rem; }
+.toolbar { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.search {
+  display: flex; align-items: center; gap: 0.6rem; flex: 1 1 280px; max-width: 460px;
+  background: var(--bg-card); border: 1px solid var(--line-strong); border-radius: 999px; padding: 0.35rem 0.4rem 0.35rem 0.9rem;
 }
+.search input { border: none; background: transparent; padding: 0.45rem 0; }
+.search input:focus { box-shadow: none; }
+.clearQ { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--text-muted); }
+.clearQ:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.toolbarRight { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.count { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+.sortWrap select { width: auto; min-width: 190px; }
+.layout { display: grid; grid-template-columns: 250px 1fr; gap: 1.75rem; align-items: start; }
+.sidebar { position: sticky; top: calc(var(--header-h) + 16px); background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.25rem; }
+.mobileFilters { display: none; }
+.filters { display: flex; flex-direction: column; gap: 1.25rem; }
+.group h3 { font-family: var(--font-sans); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem; }
+.check { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0; font-size: 0.93rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.check:hover { color: var(--text-primary); }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 2rem; font-size: 0.9rem; color: var(--text-muted); }
 
-.titleArea {
-  text-align: center;
-  margin-bottom: 2.5rem;
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 220px 1fr; }
+  .grid { grid-template-columns: repeat(2, 1fr); }
 }
-
-.title {
-  font-family: var(--font-serif);
-  font-size: 2.2rem;
-  color: var(--gold-light);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .mobileFilters { display: block; background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; }
 }
-
-.subtitle {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  margin-top: 0.5rem;
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .sortWrap select { min-width: 0; width: 100%; }
+  .toolbarRight { width: 100%; }
 }
-
-.layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 2.5rem;
-}
-
-.sidebar {
-  background: var(--bg-card);
-  border: 1px solid var(--gold-border);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-  height: fit-content;
-}
-
-.filterGroupTitle {
-  font-family: var(--font-serif);
-  font-size: 1rem;
-  color: var(--gold-primary);
-  margin-bottom: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-  padding-bottom: 0.35rem;
-}
-
-.filterList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.checkboxItem {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.checkboxItem input {
-  accent-color: var(--gold-primary);
-}
-
-.rangeGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.priceLabels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  color: var(--gold-light);
-}
-
-.clearBtn {
-  background: transparent;
-  border: 1px solid var(--gold-border);
-  color: var(--text-muted);
-  padding: 0.6rem;
-  font-size: 0.8rem;
-  border-radius: var(--radius-sm);
-  transition: var(--transition-fast);
-}
-
-.clearBtn:hover {
-  color: var(--gold-primary);
-  border-color: var(--gold-primary);
-}
-
-.topControlBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.searchBox {
-  flex: 1;
-  max-width: 380px;
-  position: relative;
-}
-
-.searchInput {
-  width: 100%;
-  padding-left: 2.5rem;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-}
-
-.sortSelect {
-  background: var(--bg-card);
-  border: 1px solid var(--gold-border);
-  color: var(--text-primary);
-  padding: 0.65rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.75rem;
-}
-
-.noResults {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: var(--text-muted);
-  grid-column: 1 / -1;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 3rem;
-}
-
-.pageBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--gold-border);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  transition: var(--transition-fast);
-}
-
-.pageBtn:hover, .activePage {
-  background: var(--gold-primary);
-  color: #000;
-  border-color: var(--gold-primary);
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .page {
-    margin: 1.5rem auto;
-    padding: 0 1.25rem;
-  }
-
-  .topControlBar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .searchBox {
-    max-width: 100%;
-  }
-
-  .sortSelect {
-    width: 100%;
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .title {
-    font-size: 1.75rem;
-  }
-}
-
+@media (max-width: 400px) { .grid { grid-template-columns: 1fr; } }
