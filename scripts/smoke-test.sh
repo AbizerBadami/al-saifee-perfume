@@ -57,23 +57,26 @@ test_endpoint "4. Public reviews GET /api/reviews" "GET" "/api/reviews" 200
 # 5. Protected orders without token
 test_endpoint "5. Protected orders GET /api/orders (no auth)" "GET" "/api/orders" 401
 
-# 6. Protected tasks without token
-test_endpoint "6. Protected tasks GET /api/tasks (no auth)" "GET" "/api/tasks" 401
+# 6. Store settings
+test_endpoint "6. Store settings GET /api/settings" "GET" "/api/settings" 200
 
 # 7. Unauthenticated admin endpoint
-test_endpoint "7. Protected admin auth GET /api/auth/me" "GET" "/api/auth/me" 401
+test_endpoint "7. Protected admin auth GET /api/auth/me (no auth)" "GET" "/api/auth/me" 401
 
 # 8. Order lookup missing params
 test_endpoint "8. Orders lookup GET /api/orders/lookup (empty params)" "GET" "/api/orders/lookup" 400
 
-# 9. Register route password validation
-test_endpoint "9. Admin register short password validation" "POST" "/api/auth/register" 400 '{"email":"test@example.com","password":"short"}'
+# 9. Admin registration disabled (single-admin security policy)
+test_endpoint "9. Admin register disabled (returns 403)" "POST" "/api/auth/register" 403 '{"email":"test@example.com","password":"password123"}'
 
-# 10. Checkout order creation with verified items
-test_endpoint "10. Checkout create-order POST /api/checkout/create-order" "POST" "/api/checkout/create-order" 200 '{"items":[{"productId":"prod-001","quantity":1,"selectedSize":"50ml Spray"}],"customerName":"Smoke Test","customerEmail":"smoke@example.com"}'
+# 10. Customer auth required for checkout
+test_endpoint "10. Checkout create-order (no customer auth -> 401)" "POST" "/api/checkout/create-order" 401 '{"items":[{"productId":"prod-001","quantity":1,"selectedSize":"50ml Spray"}],"customerName":"Smoke Test","customerEmail":"smoke@example.com"}'
 
-# 11. Checkout verify fake signature rejection
-test_endpoint "11. Checkout verify forgery rejection" "POST" "/api/checkout/verify" 400 '{"razorpay_order_id":"order_fake","razorpay_payment_id":"pay_fake","razorpay_signature":"invalid_sig"}'
+# 11. Customer auth required for checkout verification
+test_endpoint "11. Checkout verify (no customer auth -> 401)" "POST" "/api/checkout/verify" 401 '{"razorpay_order_id":"order_fake","razorpay_payment_id":"pay_fake","razorpay_signature":"invalid_sig"}'
+
+# 12. Customer me endpoint requires token
+test_endpoint "12. Customer profile GET /api/customer/me (no auth -> 401)" "GET" "/api/customer/me" 401
 
 echo "=========================================================="
 echo " Tests Complete: ${PASS_COUNT} Passed, ${FAIL_COUNT} Failed"

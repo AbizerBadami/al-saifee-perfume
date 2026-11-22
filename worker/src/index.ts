@@ -36,6 +36,7 @@ const corsMiddleware = cors({
     const allowed = new Set<string>([
       'https://alsaifeeperfumes.in',
       'https://www.alsaifeeperfumes.in',
+      'https://al-saifee-perfumes.pages.dev',
       'http://localhost:3000',
       'http://localhost:5173',
       'http://127.0.0.1:3000',
@@ -53,7 +54,7 @@ const corsMiddleware = cors({
     try {
       const u = new URL(cleanOrigin);
       if (u.hostname.endsWith('.pages.dev') && u.hostname.includes('al-saifee')) return cleanOrigin;
-    } catch {}
+    } catch { }
     return null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

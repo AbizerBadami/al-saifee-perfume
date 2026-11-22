@@ -68,23 +68,26 @@ Run-Test -Description "4. Public reviews GET /api/reviews" -Method "GET" -Path "
 # 5. Protected orders without token
 Run-Test -Description "5. Protected orders GET /api/orders (no auth)" -Method "GET" -Path "/api/orders" -ExpectedStatus 401
 
-# 6. Protected tasks without token
-Run-Test -Description "6. Protected tasks GET /api/tasks (no auth)" -Method "GET" -Path "/api/tasks" -ExpectedStatus 401
+# 6. Store settings
+Run-Test -Description "6. Store settings GET /api/settings" -Method "GET" -Path "/api/settings" -ExpectedStatus 200
 
 # 7. Protected admin auth
-Run-Test -Description "7. Protected admin auth GET /api/auth/me" -Method "GET" -Path "/api/auth/me" -ExpectedStatus 401
+Run-Test -Description "7. Protected admin auth GET /api/auth/me (no auth)" -Method "GET" -Path "/api/auth/me" -ExpectedStatus 401
 
 # 8. Orders lookup missing params
 Run-Test -Description "8. Orders lookup GET /api/orders/lookup (empty params)" -Method "GET" -Path "/api/orders/lookup" -ExpectedStatus 400
 
-# 9. Admin register short password validation
-Run-Test -Description "9. Admin register short password validation" -Method "POST" -Path "/api/auth/register" -ExpectedStatus 400 -Body '{"email":"test@example.com","password":"short"}'
+# 9. Admin registration disabled (single-admin security policy)
+Run-Test -Description "9. Admin register disabled (returns 403)" -Method "POST" -Path "/api/auth/register" -ExpectedStatus 403 -Body '{"email":"test@example.com","password":"password123"}'
 
-# 10. Checkout order creation with verified items
-Run-Test -Description "10. Checkout create-order POST /api/checkout/create-order" -Method "POST" -Path "/api/checkout/create-order" -ExpectedStatus 200 -Body '{"items":[{"productId":"prod-001","quantity":1,"selectedSize":"50ml Spray"}],"customerName":"Smoke Test","customerEmail":"smoke@example.com"}'
+# 10. Customer auth required for checkout
+Run-Test -Description "10. Checkout create-order GET /api/checkout/create-order (no customer auth -> 401)" -Method "POST" -Path "/api/checkout/create-order" -ExpectedStatus 401 -Body '{"items":[{"productId":"prod-001","quantity":1,"selectedSize":"50ml Spray"}],"customerName":"Smoke Test","customerEmail":"smoke@example.com"}'
 
-# 11. Checkout verify fake signature rejection
-Run-Test -Description "11. Checkout verify forgery rejection" -Method "POST" -Path "/api/checkout/verify" -ExpectedStatus 400 -Body '{"razorpay_order_id":"order_fake","razorpay_payment_id":"pay_fake","razorpay_signature":"invalid_sig"}'
+# 11. Customer auth required for checkout verification
+Run-Test -Description "11. Checkout verify (no customer auth -> 401)" -Method "POST" -Path "/api/checkout/verify" -ExpectedStatus 401 -Body '{"razorpay_order_id":"order_fake","razorpay_payment_id":"pay_fake","razorpay_signature":"invalid_sig"}'
+
+# 12. Customer me endpoint requires token
+Run-Test -Description "12. Customer profile GET /api/customer/me (no auth -> 401)" -Method "GET" -Path "/api/customer/me" -ExpectedStatus 401
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " Tests Complete: $passCount Passed, $failCount Failed" -ForegroundColor Cyan

@@ -1,6 +1,8 @@
 {
   "name": "al-saifee-api",
+  "account_id": "c64f636bd89cd30184b4477c793d4082",
   "main": "src/index.ts",
+  "workers_dev": true,
   "compatibility_date": "2025-01-01",
   "compatibility_flags": [
     "nodejs_compat"

@@ -1,7 +1,7 @@
 // ============================================================
 // Cloudflare Worker Bindings & Database Row Types
 // ============================================================
-/// <reference types="@cloudflare/workers-types" />
+/// <reference path="../worker-configuration.d.ts" />
 
 /** Cloudflare Worker environment bindings */
 export type Bindings = {
