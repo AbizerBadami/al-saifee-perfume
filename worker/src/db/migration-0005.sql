@@ -27,4 +27,4 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
 -- 4. Zero tax: store-wide rate to 0 (existing row; INSERT OR IGNORE is a no-op if present)
 UPDATE store_settings SET tax_rate = 0 WHERE id = 1;
 INSERT OR IGNORE INTO store_settings (id, store_name, support_email, currency_symbol, tax_rate, free_shipping_threshold, promo_message)
-VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.com', '₹', 0, 999, '');
+VALUES (1, 'Al-Saifee Perfumes', 'concierge@alsaifeeperfumes.in', '₹', 0, 999, '');

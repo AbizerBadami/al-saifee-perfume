@@ -11,8 +11,8 @@
 ## 1. Environment & secrets
 | Key | Where | Notes |
 |---|---|---|
-| `VITE_API_URL` | Pages env | Worker `/api` base URL. Dev can omit (Vite proxies `/api` → `localhost:8787`). |
-| `FRONTEND_URL` | Worker `vars` | Exact Pages/custom-domain origin, e.g. `https://alsaifeeperfumes.com`. No trailing slash. |
+| `VITE_API_URL` | Pages env | Worker `/api` base URL, e.g. `https://api.alsaifeeperfumes.in/api`. Dev can omit (Vite proxies `/api` → `localhost:8787`). |
+| `FRONTEND_URL` | Worker `vars` | Exact frontend origin(s), e.g. `https://alsaifeeperfumes.in` (also supports `https://www.alsaifeeperfumes.in`). No trailing slash. |
 | `JWT_SECRET` | `wrangler secret` | Min 32 random bytes. `openssl rand -base64 48`. Rotate if the old example secret was ever used. |
 | `RAZORPAY_KEY_ID/SECRET` | `wrangler secret` | Live keys only in production. Test keys only in dev. |
 | `JWT_EXPIRES_IN` | Worker `vars` | Seconds, clamped 300–2592000. Default 86400. |
@@ -22,7 +22,7 @@ cd worker
 wrangler secret put JWT_SECRET
 wrangler secret put RAZORPAY_KEY_ID
 wrangler secret put RAZORPAY_KEY_SECRET
-wrangler deploy --var FRONTEND_URL:https://alsaifeeperfumes.com
+wrangler deploy --var FRONTEND_URL:https://alsaifeeperfumes.in
 ```
 
 ## 2. Database (D1)

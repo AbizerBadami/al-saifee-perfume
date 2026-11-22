@@ -13,9 +13,15 @@
     }
   ],
   "vars": {
-    "FRONTEND_URL": "http://localhost:3000",
+    "FRONTEND_URL": "https://alsaifeeperfumes.in",
     "JWT_EXPIRES_IN": "86400"
   },
+  "routes": [
+    {
+      "pattern": "api.alsaifeeperfumes.in",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true
   }
@@ -23,11 +29,11 @@
   //   - JWT_SECRET (min 32 random bytes)
   //   - RAZORPAY_KEY_ID
   //   - RAZORPAY_KEY_SECRET
-  // Production: set FRONTEND_URL via `wrangler deploy --var FRONTEND_URL:https://alsaifeeperfumes.com`
+  // Production: set FRONTEND_URL via `wrangler deploy --var FRONTEND_URL:https://alsaifeeperfumes.in`
   // or [env.production] vars below.
   // "env": {
   //   "production": {
-  //     "vars": { "FRONTEND_URL": "https://alsaifeeperfumes.com" }
+  //     "vars": { "FRONTEND_URL": "https://alsaifeeperfumes.in" }
   //   }
   // }
 }

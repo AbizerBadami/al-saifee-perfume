@@ -29,32 +29,40 @@ app.use('*', async (c, next) => {
 });
 
 // CORS — strict allowlist, no open reflector
-app.use(
-  '/api/*',
-  cors({
-    origin: (origin, c) => {
-      if (!origin) return null;
-      const configured = c.env.FRONTEND_URL?.replace(/\/$/, '');
-      const allowed = new Set<string>([
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173',
-      ]);
-      if (configured) allowed.add(configured);
-      if (allowed.has(origin)) return origin;
-      // Preview deployments: allow only our Pages project subdomains
-      try {
-        const u = new URL(origin);
-        if (u.hostname.endsWith('.pages.dev') && u.hostname.includes('al-saifee')) return origin;
-      } catch {}
-      return null;
-    },
-    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 86400,
-  })
-);
+const corsMiddleware = cors({
+  origin: (origin, c) => {
+    if (!origin) return null;
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const allowed = new Set<string>([
+      'https://alsaifeeperfumes.in',
+      'https://www.alsaifeeperfumes.in',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+    ]);
+    const configured = c.env.FRONTEND_URL;
+    if (configured) {
+      for (const item of configured.split(',')) {
+        const trimmed = item.trim().replace(/\/$/, '');
+        if (trimmed) allowed.add(trimmed);
+      }
+    }
+    if (allowed.has(cleanOrigin)) return cleanOrigin;
+    // Preview deployments: allow only our Pages project subdomains
+    try {
+      const u = new URL(cleanOrigin);
+      if (u.hostname.endsWith('.pages.dev') && u.hostname.includes('al-saifee')) return cleanOrigin;
+    } catch {}
+    return null;
+  },
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400,
+});
+
+app.use('*', corsMiddleware);
 
 app.get('/', (c) => {
   return c.json({

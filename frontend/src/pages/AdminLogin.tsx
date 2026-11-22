@@ -44,7 +44,7 @@ export const AdminLogin: React.FC = () => {
           </div>
           <div>
             <label htmlFor="admin-pass">Password *</label>
-            <input id="admin-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="current-password" />
+            <input id="admin-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
           </div>
           <button type="submit" className="btn btn-primary" disabled={busy} style={{ width: '100%' }}>
             <FiLock /> {busy ? 'Please wait…' : 'Sign in'}

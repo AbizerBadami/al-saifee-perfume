@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- DEV-ONLY responsive test harness. DELETE before production build. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Responsive harness</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #eee; }
+  h2 { margin: 32px 0 8px; font-size: 18px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 16px; }
+  figure { margin: 0; background: #fff; border: 1px solid #999; flex-shrink: 0; }
+  figcaption { font-size: 12px; padding: 4px 8px; background: #333; color: #fff; }
+  iframe { border: 0; display: block; background: #fff; }
+  #report { background: #111; color: #0f0; padding: 12px; font: 12px monospace; white-space: pre-wrap; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Responsive harness (dev only)</h1>
+<button id="run" style="font-size:16px;padding:10px 20px;">Run overflow checks</button>
+<div id="report">Not run yet.</div>
+<div id="cases"></div>
+<script>
+const routes = ['/', '/shop', '/product/prod-001', '/login', '/register', '/tracking', '/checkout', '/wishlist', '/account', '/admin/login'];
+const widths = [360, 768, 1024, 1440];
+const host = document.getElementById('cases');
+routes.forEach(route => {
+  const h = document.createElement('h2');
+  h.textContent = route;
+  host.appendChild(h);
+  const row = document.createElement('div');
+  row.className = 'row';
+  widths.forEach(w => {
+    const fig = document.createElement('figure');
+    const cap = document.createElement('figcaption');
+    cap.textContent = route + ' @ ' + w + 'px';
+    const f = document.createElement('iframe');
+    f.style.width = w + 'px';
+    f.style.height = '800px';
+    f.dataset.route = route;
+    f.dataset.width = w;
+    // Stagger loads to avoid hammering the API
+    f.loading = 'lazy';
+    f.src = route;
+    fig.appendChild(cap);
+    fig.appendChild(f);
+    row.appendChild(fig);
+  });
+  host.appendChild(row);
+});
+document.getElementById('run').onclick = () => {
+  const out = [];
+  document.querySelectorAll('iframe').forEach(f => {
+    try {
+      const d = f.contentDocument;
+      const de = d.documentElement;
+      const overflowX = de.scrollWidth - de.clientWidth;
+      const bad = [];
+      if (overflowX > 1) {
+        d.querySelectorAll('*').forEach(el => {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && (r.right - de.clientWidth) > 2 && r.width < de.clientWidth * 3) {
+            const label = el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').slice(0, 2).join('.') : '');
+            if (bad.length < 6) bad.push(label + ' w=' + Math.round(r.width));
+          }
+        });
+      }
+      out.push(`${f.dataset.route} @ ${f.dataset.width}: ${overflowX > 1 ? 'OVERFLOW +' + overflowX + 'px [' + bad.join(', ') + ']' : 'ok'}`);
+    } catch (e) {
+      out.push(`${f.dataset.route} @ ${f.dataset.width}: ERROR ${e}`);
+    }
+  });
+  document.getElementById('report').textContent = out.join('\n');
+};
+</script>
+</body>
+</html>

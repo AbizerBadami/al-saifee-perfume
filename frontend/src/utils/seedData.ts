@@ -210,7 +210,7 @@ export const INITIAL_PRODUCTS: Product[] = [
 
 export const INITIAL_SETTINGS: StoreSettings = {
   storeName: 'Al-Saifee Perfumes',
-  supportEmail: 'concierge@alsaifeeperfumes.com',
+  supportEmail: 'concierge@alsaifeeperfumes.in',
   currencySymbol: '₹',
   taxRate: 0, // zero tax store-wide
   freeShippingThreshold: 999,

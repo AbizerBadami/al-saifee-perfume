@@ -2,6 +2,16 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "al-saifee-frontend",
   "compatibility_date": "2026-10-01",
+  "routes": [
+    {
+      "pattern": "alsaifeeperfumes.in",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.alsaifeeperfumes.in",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true
   },

@@ -38,7 +38,7 @@ settings.get('/', rateLimiter(30, 60), async (c) => {
   if (!row) {
     return c.json({
       storeName: 'Al-Saifee Perfumes',
-      supportEmail: 'concierge@alsaifeeperfumes.com',
+      supportEmail: 'concierge@alsaifeeperfumes.in',
       currencySymbol: '₹',
       taxRate: 0,
       freeShippingThreshold: 999,

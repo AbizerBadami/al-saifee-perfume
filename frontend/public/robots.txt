@@ -5,4 +5,4 @@ Disallow: /admin/login
 Disallow: /checkout
 Disallow: /success
 
-Sitemap: https://alsaifeeperfumes.com/sitemap.xml
+Sitemap: https://alsaifeeperfumes.in/sitemap.xml

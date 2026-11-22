@@ -4,7 +4,7 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	RATE_LIMITER: RateLimit;
-	FRONTEND_URL: "https://al-saifee-frontend.al-saifee-worker.workers.dev";
+	FRONTEND_URL: "https://alsaifeeperfumes.in";
 	JWT_EXPIRES_IN: "86400";
 	RAZORPAY_KEY_ID: string;
 	RAZORPAY_KEY_SECRET: string;

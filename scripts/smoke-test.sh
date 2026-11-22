@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-BASE_URL="${API_URL:-https://al-saifee-api.al-saifee-worker.workers.dev}"
+BASE_URL="${API_URL:-https://api.alsaifeeperfumes.in}"
 PASS_COUNT=0
 FAIL_COUNT=0
 

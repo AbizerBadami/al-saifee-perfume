@@ -4,7 +4,7 @@
 # ============================================================
 
 param(
-    [string]$BaseUrl = "https://al-saifee-api.al-saifee-worker.workers.dev"
+    [string]$BaseUrl = "https://api.alsaifeeperfumes.in"
 )
 
 $passCount = 0

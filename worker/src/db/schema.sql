@@ -96,7 +96,7 @@ CREATE INDEX IF NOT EXISTS idx_reviews_order ON reviews(order_number);
 CREATE TABLE IF NOT EXISTS store_settings (
   id                      INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   store_name              TEXT NOT NULL DEFAULT 'Al-Saifee Perfumes',
-  support_email           TEXT NOT NULL DEFAULT 'concierge@alsaifeeperfumes.com',
+  support_email           TEXT NOT NULL DEFAULT 'concierge@alsaifeeperfumes.in',
   currency_symbol         TEXT NOT NULL DEFAULT '₹',
   tax_rate                REAL NOT NULL DEFAULT 0 CHECK (tax_rate >= 0 AND tax_rate <= 1),
   free_shipping_threshold REAL NOT NULL DEFAULT 999 CHECK (free_shipping_threshold >= 0),

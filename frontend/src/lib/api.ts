@@ -1,5 +1,8 @@
 // Centralized API client — typed, consistent errors
-const API_BASE = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '') || '/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL as string)?.replace(/\/$/, '');
+const API_BASE = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
+  : '/api';
 
 export class ApiError extends Error {
   status: number;
