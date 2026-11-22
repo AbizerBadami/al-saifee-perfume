@@ -1,0 +1,169 @@
+/* HeroSlide.module.css — scoped styles for a single slide panel.
+   All class names are unique to this component (hs-* prefix
+   acts as an extra safety net against global bleed). */
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Background image layer ───────────────────────────────────── */
+.bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+}
+/* Dark gradient scrim so text is always readable */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(14, 12, 10, 0.72) 0%,
+    rgba(14, 12, 10, 0.44) 55%,
+    rgba(14, 12, 10, 0.12) 100%
+  );
+}
+
+/* ── Copy panel ───────────────────────────────────────────────── */
+.copy {
+  position: relative;
+  z-index: 1;
+  padding: 3.5rem 3rem 3.5rem 0;
+  /* left padding comes from the outer container */
+  color: #f4f1ea;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.7);
+  margin: 0 0 0.9rem;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 560;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 1rem;
+  max-width: 15ch;
+  color: #fff;
+}
+
+.sub {
+  font-size: 1.03rem;
+  color: rgba(244, 241, 234, 0.82);
+  max-width: 44ch;
+  line-height: 1.65;
+  margin: 0 0 1.75rem;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* CTA overrides — inline light/dark variants so the slide
+   works against the dark scrim regardless of theme */
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.7rem 1.5rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 1.5px solid #f4f1ea;
+  background: #f4f1ea;
+  color: #1c1b1a;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+.ctaPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: #fff;
+  border-color: #fff;
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 1.5px solid rgba(244, 241, 234, 0.45);
+  background: transparent;
+  color: rgba(244, 241, 234, 0.9);
+  transition: border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.ctaSecondary:hover {
+  border-color: rgba(244, 241, 234, 0.9);
+  color: #fff;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .slide {
+    grid-template-columns: 1fr;
+    align-items: flex-end;
+  }
+  .copy {
+    padding: 2rem 1.25rem 2.5rem;
+  }
+  .scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(14, 12, 10, 0.18) 0%,
+      rgba(14, 12, 10, 0.72) 60%,
+      rgba(14, 12, 10, 0.88) 100%
+    );
+  }
+  .heading {
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+  }
+  .sub {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .copy {
+    padding: 1.5rem 1rem 2rem;
+  }
+  .ctaRow {
+    flex-direction: column;
+  }
+  .ctaPrimary,
+  .ctaSecondary {
+    width: 100%;
+    text-align: center;
+  }
+  .heading {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+  }
+}
